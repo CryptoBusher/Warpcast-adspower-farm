@@ -547,3 +547,4 @@ class WarpcastProfile(AdspowerProfile):
 
             finally:
                 self.random_activity_sleep()
+
