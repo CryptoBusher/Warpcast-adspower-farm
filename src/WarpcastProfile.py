@@ -1,5 +1,6 @@
 from random import choice, randint, uniform, sample, shuffle
 from sys import stderr
+import json
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -11,16 +12,12 @@ from data.config import config
 from src.AdspowerProfile import AdspowerProfile
 from src.helpers import remove_line
 
-
 logger_level = "DEBUG" if config['show_debug_logs'] else "INFO"
 logger.add(stderr, level=logger_level, format="<white>{time:HH:mm:ss}</white> | <level>{level: <8}</level> | <white>{"
                                               "message}</white>")
 
 
 class WarpcastProfile(AdspowerProfile):
-    def visit_warpcast(self):
-        self.driver.get('https://warpcast.com/')
-
     def __get_visible_elements(self, elements: list[WebElement]):
         visible_elements = []
 
@@ -43,45 +40,21 @@ class WarpcastProfile(AdspowerProfile):
 
         return visible_elements
 
-    def cast_on_homepage(self):
-        with open('data/casts.txt', 'r', encoding="utf8") as file:
-            casts_raw = [i.strip() for i in file]
-
-        casts = {}
-        for cast_raw in casts_raw:
-            profile_name, cast_text = cast_raw.split('|')
-            if profile_name not in casts:
-                casts[profile_name] = []
-            casts[profile_name].append(cast_text)
-
-        try:
-            casts_for_profile = casts[self.profile_name]
-            if config['cast_on_homepage']['keep_order']:
-                cast_text = casts_for_profile[0]
-            else:
-                cast_text = choice()
-
-        except KeyError:
-            raise Exception('No any casts provided')
-
-        logger.debug('cast_on_homepage: pressing cast button')
-        cast_button = self.driver.find_element(By.XPATH, '//main//button[text()="Cast"]')
-        self.human_hover(cast_button, click=True)
+    def __use_search_input(self, text: str, press_enter: bool = True):
+        logger.debug('__use_search_input: entered method')
+        logger.debug('__use_search_input: selecting search input')
+        search_input = self.driver.find_element(By.XPATH, '//input[@type="search"]')
+        self.human_hover(search_input, True)
         self.random_subactivity_sleep()
 
-        logger.debug('cast_on_homepage: entering cast text')
-        self.human_type(cast_text + ' ')
+        logger.debug('__use_search_input: typing')
+        self.human_type(text)
         self.random_subactivity_sleep()
 
-        to_use_emoji = True if uniform(0, 1) <= config["use_emoji_in_cast_probability"] else False
-        if to_use_emoji:
-            self.__pick_cast_emoji()
-
-        logger.debug('cast_on_homepage: pressing final cast button')
-        final_cast_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//button[@title="Cast"]')
-        self.human_hover(final_cast_button, click=True)
-        self.random_subactivity_sleep()
-        remove_line('data/casts.txt', f'{self.profile_name}|{cast_text}')
+        if press_enter:
+            logger.debug('__use_search_input: pressing ENTER')
+            self.action_chain.send_keys(Keys.ENTER).perform()
+            self.random_subactivity_sleep()
 
     def __pick_cast_emoji(self):
         logger.debug('__pick_cast_emoji: entered method')
@@ -100,7 +73,7 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         logger.debug('__pick_cast_emoji: entering emoji name')
-        with open('data/emoji_names.txt', 'r', encoding="utf8") as file:
+        with open('data/farm_data/emoji_names.txt', 'r', encoding="utf8") as file:
             all_emoji_names = [i.strip() for i in file]
         if not len(all_emoji_names):
             raise Exception('Missing emoji names, check data folder')
@@ -128,45 +101,6 @@ class WarpcastProfile(AdspowerProfile):
         area_to_click_to_close_emoji_picker = self.driver.find_element(By.XPATH, '//div[@class="DraftEditor-root"]')
         self.human_hover(area_to_click_to_close_emoji_picker, click=True)
         self.random_subactivity_sleep()
-
-    def subscribe_to_users(self):
-        logger.debug('subscribe_to_users: entered method')
-        current_url = self.driver.current_url
-        if current_url != 'https://warpcast.com/~/explore/users':
-            logger.debug('subscribe_to_users: navigating to users list page')
-            find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Find Users"]')
-            self.human_hover(find_users_button, click=True)
-            self.random_subactivity_sleep()
-
-        self.__start_subscribing_with_scroll(
-            config['subscribe_via_explore']['min_scroll_episodes'],
-            config['subscribe_via_explore']['max_scroll_episodes'],
-            config['subscribe_via_explore']['min_subscribes_per_episode'],
-            config['subscribe_via_explore']['max_subscribes_per_episode'],
-            '//main//div[@class=" fade-in"]//button[text()="Follow"]'
-        )
-
-    def subscribe_to_channels(self):
-        logger.debug('subscribe_to_channels: entered method')
-        current_url = self.driver.current_url
-        if current_url != 'https://warpcast.com/~/explore/channels':
-            if current_url != 'https://warpcast.com/~/explore/users':
-                logger.debug('subscribe_to_users: navigating to users list page')
-                find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Find Users"]')
-                self.human_hover(find_users_button, click=True)
-
-            logger.debug('subscribe_to_users: navigating to channels list page')
-            find_channels_button = self.driver.find_element(By.XPATH, '//a[@title="Channels for you to follow"]')
-            self.human_hover(find_channels_button, click=True)
-            self.random_subactivity_sleep()
-
-        self.__start_subscribing_with_scroll(
-            config['subscribe_via_explore']['min_scroll_episodes'],
-            config['subscribe_via_explore']['max_scroll_episodes'],
-            config['subscribe_via_explore']['min_subscribes_per_episode'],
-            config['subscribe_via_explore']['max_subscribes_per_episode'],
-            '//main//div[@class=" fade-in"]//button[text()="Follow"]'
-        )
 
     def __start_subscribing_with_scroll(self, min_scroll_episodes: int, max_scroll_episodes: int,
                                         min_subs_per_episode: int, max_subs_per_episode: int, buttons_xpath: str,
@@ -233,7 +167,7 @@ class WarpcastProfile(AdspowerProfile):
 
     def __dodge_popup(self):
         logger.debug('__dodge_popup: entered method')
-        for i in range(randint(config['popup_dodge']['min_tries'],config['popup_dodge']['max_tries'])):
+        for i in range(randint(config['popup_dodge']['min_tries'], config['popup_dodge']['max_tries'])):
             try:
                 self.driver.find_element(By.CSS_SELECTOR, '[data-radix-popper-content-wrapper]')
                 logger.debug('__dodge_popup: popup located, trying to dodge')
@@ -258,6 +192,88 @@ class WarpcastProfile(AdspowerProfile):
                 return
 
         logger.debug('__dodge_popup: failed to dodge popup')
+
+    def visit_warpcast(self):
+        self.driver.get('https://warpcast.com/')
+
+    def cast_on_homepage(self):
+        with open('data/farm_data/casts.txt', 'r', encoding="utf8") as file:
+            casts_raw = [i.strip() for i in file]
+
+        casts = {}
+        for cast_raw in casts_raw:
+            profile_name, cast_text = cast_raw.split('|')
+            if profile_name not in casts:
+                casts[profile_name] = []
+            casts[profile_name].append(cast_text)
+
+        try:
+            casts_for_profile = casts[self.profile_name]
+            if config['cast_on_homepage']['keep_order']:
+                cast_text = casts_for_profile[0]
+            else:
+                cast_text = choice()
+
+        except KeyError:
+            raise Exception('No any casts provided')
+
+        logger.debug('cast_on_homepage: pressing cast button')
+        cast_button = self.driver.find_element(By.XPATH, '//main//button[text()="Cast"]')
+        self.human_hover(cast_button, click=True)
+        self.random_subactivity_sleep()
+
+        logger.debug('cast_on_homepage: entering cast text')
+        self.human_type(cast_text + ' ')
+        self.random_subactivity_sleep()
+
+        to_use_emoji = True if uniform(0, 1) < config["use_emoji_in_cast_probability"] else False
+        if to_use_emoji:
+            self.__pick_cast_emoji()
+
+        logger.debug('cast_on_homepage: pressing final cast button')
+        final_cast_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//button[@title="Cast"]')
+        self.human_hover(final_cast_button, click=True)
+        self.random_subactivity_sleep()
+        remove_line('data/farm_data/casts.txt', f'{self.profile_name}|{cast_text}')
+
+    def subscribe_to_users(self):
+        logger.debug('subscribe_to_users: entered method')
+        current_url = self.driver.current_url
+        if current_url != 'https://warpcast.com/~/explore/users':
+            logger.debug('subscribe_to_users: navigating to users list page')
+            find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Find Users"]')
+            self.human_hover(find_users_button, click=True)
+            self.random_subactivity_sleep()
+
+        self.__start_subscribing_with_scroll(
+            config['subscribe_via_explore']['min_scroll_episodes'],
+            config['subscribe_via_explore']['max_scroll_episodes'],
+            config['subscribe_via_explore']['min_subscribes_per_episode'],
+            config['subscribe_via_explore']['max_subscribes_per_episode'],
+            '//main//div[@class=" fade-in"]//button[text()="Follow"]'
+        )
+
+    def subscribe_to_channels(self):
+        logger.debug('subscribe_to_channels: entered method')
+        current_url = self.driver.current_url
+        if current_url != 'https://warpcast.com/~/explore/channels':
+            if current_url != 'https://warpcast.com/~/explore/users':
+                logger.debug('subscribe_to_users: navigating to users list page')
+                find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Find Users"]')
+                self.human_hover(find_users_button, click=True)
+
+            logger.debug('subscribe_to_users: navigating to channels list page')
+            find_channels_button = self.driver.find_element(By.XPATH, '//a[@title="Channels for you to follow"]')
+            self.human_hover(find_channels_button, click=True)
+            self.random_subactivity_sleep()
+
+        self.__start_subscribing_with_scroll(
+            config['subscribe_via_explore']['min_scroll_episodes'],
+            config['subscribe_via_explore']['max_scroll_episodes'],
+            config['subscribe_via_explore']['min_subscribes_per_episode'],
+            config['subscribe_via_explore']['max_subscribes_per_episode'],
+            '//main//div[@class=" fade-in"]//button[text()="Follow"]'
+        )
 
     def surf_feed(self):
         def like(interaction_button_div: WebElement):
@@ -292,9 +308,9 @@ class WarpcastProfile(AdspowerProfile):
             self.human_scroll()
             self.random_subactivity_sleep()
 
-            to_recast = True if (uniform(0, 1) <= config['surf_feed']['recast_probability']) else False
-            to_like = True if (uniform(0, 1) <= config['surf_feed']['like_probability']) else False
-            to_bookmark = True if (uniform(0, 1) <= config['surf_feed']['bookmark_probability']) else False
+            to_recast = True if (uniform(0, 1) < config['surf_feed']['recast_probability']) else False
+            to_like = True if (uniform(0, 1) < config['surf_feed']['like_probability']) else False
+            to_bookmark = True if (uniform(0, 1) < config['surf_feed']['bookmark_probability']) else False
             logger.debug(f'surf_feed: recast - {to_recast}, like - {to_like}, bookmark - {to_bookmark}')
 
             if not to_recast + to_like + to_bookmark:
@@ -330,7 +346,7 @@ class WarpcastProfile(AdspowerProfile):
 
     def subscribe_to_authors_via_search(self):
         logger.debug('subscribe_to_authors_via_search: entered method')
-        with open("data/search_authors.txt", "r") as _file:
+        with open("data/farm_data/search_authors.txt", "r") as _file:
             all_text_lines = [i.strip() for i in _file]
 
         if not len(all_text_lines):
@@ -339,7 +355,7 @@ class WarpcastProfile(AdspowerProfile):
         text = choice(all_text_lines)
         self.__use_search_input(text)
         if config['subscribe_to_authors_via_search']['remove_text_from_base']:
-            remove_line("data/search_authors.txt", text)
+            remove_line("data/farm_data/search_authors.txt", text)
 
         use_scrolling_probability = config['subscribe_to_authors_via_search']['use_scrolling_probability']
         use_scrolling = True if uniform(0, 1) < use_scrolling_probability else False
@@ -363,7 +379,7 @@ class WarpcastProfile(AdspowerProfile):
 
     def subscribe_to_channels_via_search(self):
         logger.debug('subscribe_to_channels_via_search: entered method')
-        with open("data/search_channels.txt", "r") as _file:
+        with open("data/farm_data/search_channels.txt", "r") as _file:
             all_text_lines = [i.strip() for i in _file]
 
         if not len(all_text_lines):
@@ -372,7 +388,7 @@ class WarpcastProfile(AdspowerProfile):
         text = choice(all_text_lines)
         self.__use_search_input(text)
         if config['subscribe_to_channels_via_search']['remove_text_from_base']:
-            remove_line("data/search_channels.txt", text)
+            remove_line("data/farm_data/search_channels.txt", text)
 
         find_channels_button = self.driver.find_element(By.XPATH, '//a[@title="Channels found based on your search"]')
         self.human_hover(find_channels_button, click=True)
@@ -399,7 +415,7 @@ class WarpcastProfile(AdspowerProfile):
 
     def subscribe_to_users_via_search(self):
         logger.debug('subscribe_to_users_via_search: entered method')
-        with open("data/search_users.txt", "r") as _file:
+        with open("data/farm_data/search_users.txt", "r") as _file:
             all_text_lines = [i.strip() for i in _file]
 
         if not len(all_text_lines):
@@ -408,7 +424,7 @@ class WarpcastProfile(AdspowerProfile):
         text = choice(all_text_lines)
         self.__use_search_input(text)
         if config['subscribe_to_users_via_search']['remove_text_from_base']:
-            remove_line("data/search_users.txt", text)
+            remove_line("data/farm_data/search_users.txt", text)
 
         find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Users found based on your search"]')
         self.human_hover(find_users_button, click=True)
@@ -433,17 +449,101 @@ class WarpcastProfile(AdspowerProfile):
                 '//main//div[@class=" fade-in"]//button[text()="Follow"]'
             )
 
-    def __use_search_input(self, text: str):
-        logger.debug('__use_search_input: entered method')
-        logger.debug('__use_search_input: selecting search input')
-        search_input = self.driver.find_element(By.XPATH, '//input[@type="search"]')
-        self.human_hover(search_input, True)
-        self.random_subactivity_sleep()
+    def subscribe_to_mandatory_users(self):
+        self.__mandatory_subscribe(True)
 
-        logger.debug('__use_search_input: typing')
-        self.human_type(text)
-        self.random_subactivity_sleep()
+    def subscribe_to_mandatory_channels(self):
+        self.__mandatory_subscribe(False)
 
-        logger.debug('__use_search_input: pressing ENTER')
-        self.action_chain.send_keys(Keys.ENTER).perform()
-        self.random_subactivity_sleep()
+    def __mandatory_subscribe(self, to_users: bool):
+        def direct_link_subscribe(target_name: str):
+            url = f'https://warpcast.com/{target_name}' if to_users else f'https://warpcast.com/~/channel/{target_name}'
+            self.driver.get(url)
+            self.random_subactivity_sleep()
+
+            subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
+            if subscribe_button.text == "Follow":
+                self.human_hover(subscribe_button, click=True)
+            else:
+                logger.info(f'{self.profile_name} - already subscribed to target {target_name}')
+
+        def subscribe_via_search(target_name: str):
+            self.__use_search_input(target_name, False)
+            self.random_subactivity_sleep()
+
+            options_list = self.driver.find_element(By.XPATH, f'//form//div[text()="Users"]/../div[2]')
+            all_options = options_list.find_elements(By.XPATH, 'div')
+
+            for option in all_options:
+                username = option.find_element(By.CSS_SELECTOR, 'div[class = "text-muted text-sm"]').text
+                if username.replace('@', '') == target_name:
+                    logger.debug('__mandatory_subscribe:subscribe_via_search: found target, subscribing')
+                    self.human_hover(option, True)
+                    self.random_subactivity_sleep()
+
+                    subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
+                    if subscribe_button.text == "Follow":
+                        self.human_hover(subscribe_button, click=True)
+                    else:
+                        logger.info(f'{self.profile_name} - already subscribed to target {target_name}')
+                    return
+
+            raise Exception()
+
+        with open('data/profile_logs.json') as file:
+            profile_logs = json.load(file)
+
+        if to_users:
+            logger.debug('__mandatory_subscribe: subscribing to users')
+            subscribe_config = config['subscribe_to_mandatory_users']
+            already_subscribed = profile_logs[self.profile_name]['mandatory_users_subscribes']
+            with open('data/farm_data/subscribe_to_users.txt', 'r', encoding="utf8") as file:
+                subscribe_targets = [i.strip() for i in file]
+        else:
+            logger.debug('__mandatory_subscribe: subscribing to channels')
+            subscribe_config = config['subscribe_to_mandatory_channels']
+            already_subscribed = profile_logs[self.profile_name]['mandatory_channels_subscribes']
+            with open('data/farm_data/subscribe_to_channels.txt', 'r', encoding="utf8") as file:
+                subscribe_targets = [i.strip() for i in file]
+
+        remaining_subscribe_targets = list(set(subscribe_targets) - set(already_subscribed))
+        shuffle(remaining_subscribe_targets)
+        logger.debug(f'__mandatory_subscribe: {len(remaining_subscribe_targets)} remaining_subscribe_targets')
+        if not remaining_subscribe_targets:
+            logger.info(f'{self.profile_name} - already subscribed to all targets')
+            return
+
+        subscribes_count = randint(subscribe_config['min_subscribes_per_run'],
+                                   subscribe_config['max_subscribes_per_run'])
+
+        if subscribes_count > len(remaining_subscribe_targets):
+            subscribes_count = len(remaining_subscribe_targets)
+        logger.debug(f'__mandatory_subscribe: {subscribes_count} subscribes_count')
+
+        for i in range(subscribes_count):
+            target = remaining_subscribe_targets.pop(0)
+            if to_users:
+                use_direct_link = True if uniform(0, 1) < subscribe_config["use_direct_link_probability"] else False
+            else:
+                use_direct_link = True
+
+            logger.debug(f'__mandatory_subscribe: {use_direct_link} use_direct_link')
+
+            try:
+                if use_direct_link:
+                    direct_link_subscribe(target)
+                else:
+                    subscribe_via_search(target)
+
+                logger.info(f'{self.profile_name} - subscribed to {target}')
+
+                log_update_key = "mandatory_users_subscribes" if to_users else "mandatory_channels_subscribes"
+                profile_logs[self.profile_name][log_update_key].append(target)
+                with open("data/profile_logs.json", "w") as file:
+                    json.dump(profile_logs, file, indent=4)
+
+            except Exception:
+                logger.error(f'{self.profile_name} - failed to subscribe to user, unexpected error')
+
+            finally:
+                self.random_activity_sleep()
