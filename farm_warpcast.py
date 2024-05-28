@@ -46,6 +46,14 @@ def start_farm(_account: WarpcastProfile):
         _account.subscribe_to_users_via_search: {
             "probability": config['subscribe_to_users_via_search']['use_module_probability'],
             "name": "subscribe to users via search"
+        },
+        _account.subscribe_to_mandatory_users: {
+            "probability": config['subscribe_to_mandatory_users']['use_module_probability'],
+            "name": "subscribe to mandatory users"
+        },
+        _account.subscribe_to_mandatory_channels: {
+            "probability": config['subscribe_to_mandatory_channels']['use_module_probability'],
+            "name": "subscribe to mandatory channels"
         }
     }
 
@@ -90,7 +98,7 @@ if __name__ == "__main__":
         logger.info(f"Amount of profiles to farm > total amount of profiles, adjusted")
         config["profiles_to_farm"] = len(warpcast_accounts)
 
-    # for debugging
+    # # for debugging
     # self = warpcast_accounts[0]
     # self.open_profile()
 
