@@ -1,6 +1,7 @@
 from random import randint, uniform
 from time import sleep
 from sys import stderr
+import json
 
 import requests
 from selenium import webdriver
@@ -29,6 +30,28 @@ class AdspowerProfile:
         self.action_chain = None
         self.wait = None
         self.profile_was_running = None
+
+        self.__init_profile_logs()
+
+    def __init_profile_logs(self):
+        logger.debug('__init_profile_logs: entered method')
+        with open('data/profile_logs.json') as file:
+            profile_logs = json.load(file)
+
+        if self.profile_name not in profile_logs:
+            profile_logs[self.profile_name] = {}
+
+        if "mandatory_users_subscribes" not in profile_logs[self.profile_name]:
+            profile_logs[self.profile_name]["mandatory_users_subscribes"] = []
+
+        if "mandatory_channels_subscribes" not in profile_logs[self.profile_name]:
+            profile_logs[self.profile_name]["mandatory_channels_subscribes"] = []
+
+        if "wallet_connected" not in profile_logs[self.profile_name]:
+            profile_logs[self.profile_name]["wallet_connected"] = False
+
+        with open("data/profile_logs.json", "w") as file:
+            json.dump(profile_logs, file, indent=4)
 
     @staticmethod
     def random_activity_sleep():
