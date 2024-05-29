@@ -21,4 +21,4 @@ def remove_line(file_path: str, line_to_remove: str):
     with open(file_path, "w") as _file:
         for line in lines:
             if line != line_to_remove:
-                _file.write(line)
+                _file.write(line + '\n')
