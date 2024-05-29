@@ -119,10 +119,6 @@ if __name__ == "__main__":
         logger.info(f"Amount of profiles to farm > total amount of profiles, adjusted")
         config["profiles_to_farm"] = len(warpcast_accounts)
 
-    # for debugging
-    self = warpcast_accounts[0]
-    self.open_profile()
-
     for i in range(config["profiles_to_farm"]):
         account = warpcast_accounts.pop(randint(0, len(warpcast_accounts) - 1))
 
