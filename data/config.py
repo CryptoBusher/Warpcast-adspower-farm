@@ -6,6 +6,19 @@ config = {
     "show_debug_logs": False,                   # показывать дебаг лог, обычному юзеру не нужно (True / False)
     "element_wait_sec": 60,                     # как долго ждать подгрузки элемента перед фейлом, секунд (1+)
 
+    # Свичи модулей
+    "module_switches": {
+        "cast_on_homepage": True,
+        "surf_feed": True,
+        "subscribe_to_users_via_explore": True,
+        "subscribe_to_channels_via_explore": True,
+        "subscribe_to_authors_via_search": True,
+        "subscribe_to_channels_via_search": True,
+        "subscribe_to_users_via_search": True,
+        "subscribe_to_mandatory_users": True,
+        "subscribe_to_mandatory_channels": True
+    },
+
     # Настройки модулей
     "cast_on_homepage": {
         "use_module_probability": 0.5,          # вероятность поста каста своей ленте (0 - 1)
