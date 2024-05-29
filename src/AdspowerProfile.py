@@ -14,11 +14,6 @@ from loguru import logger
 from data.config import config
 
 
-logger_level = "DEBUG" if config['show_debug_logs'] else "INFO"
-logger.add(stderr, level=logger_level, format="<white>{time:HH:mm:ss}</white> | <level>{level: <8}</level> | <white>{"
-                                              "message}</white>")
-
-
 class AdspowerProfile:
     API_ROOT = 'http://local.adspower.com:50325'
 
