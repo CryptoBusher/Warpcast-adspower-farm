@@ -12,10 +12,6 @@ from data.config import config
 from src.AdspowerProfile import AdspowerProfile
 from src.helpers import remove_line
 
-logger_level = "DEBUG" if config['show_debug_logs'] else "INFO"
-logger.add(stderr, level=logger_level, format="<white>{time:HH:mm:ss}</white> | <level>{level: <8}</level> | <white>{"
-                                              "message}</white>")
-
 
 class WarpcastProfile(AdspowerProfile):
     def __get_visible_elements(self, elements: list[WebElement]):
@@ -79,7 +75,8 @@ class WarpcastProfile(AdspowerProfile):
             raise Exception('Missing emoji names, check data folder')
 
         emoji_name = choice(all_emoji_names)
-        index_to = len(emoji_name) - 1 - randint(0, int(len(emoji_name) / 3))
+        index_to = len(emoji_name) - 1 - randint(0, int(len(emoji_name) / 3)) \
+            if len(emoji_name) > 4 else len(emoji_name)
         self.human_type(emoji_name[:index_to])
         self.random_subactivity_sleep()
 
@@ -212,7 +209,7 @@ class WarpcastProfile(AdspowerProfile):
             if config['cast_on_homepage']['keep_order']:
                 cast_text = casts_for_profile[0]
             else:
-                cast_text = choice()
+                cast_text = choice(casts_for_profile)
 
         except KeyError:
             raise Exception('No any casts provided')
@@ -236,7 +233,7 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
         remove_line('data/farm_data/casts.txt', f'{self.profile_name}|{cast_text}')
 
-    def subscribe_to_users(self):
+    def subscribe_to_users_via_explore(self):
         logger.debug('subscribe_to_users: entered method')
         current_url = self.driver.current_url
         if current_url != 'https://warpcast.com/~/explore/users':
@@ -253,7 +250,7 @@ class WarpcastProfile(AdspowerProfile):
             '//main//div[@class=" fade-in"]//button[text()="Follow"]'
         )
 
-    def subscribe_to_channels(self):
+    def subscribe_to_channels_via_explore(self):
         logger.debug('subscribe_to_channels: entered method')
         current_url = self.driver.current_url
         if current_url != 'https://warpcast.com/~/explore/channels':
@@ -547,4 +544,3 @@ class WarpcastProfile(AdspowerProfile):
 
             finally:
                 self.random_activity_sleep()
-
