@@ -74,12 +74,12 @@ class AdspowerProfile:
         y = height_deviation_pixels if positive_height_deviation else -height_deviation_pixels
 
         if click:
-            logger.debug('human_hover: hover + clicking')
+            logger.debug(f'human_hover: hover + clicking "{element.text}"')
             self.action_chain.move_to_element_with_offset(element, x, y).perform()
             sleep(uniform(0.5, 2))
             self.action_chain.click().perform()
         else:
-            logger.debug('human_hover: hover only')
+            logger.debug(f'human_hover: hover only "{element.text}"')
             self.action_chain.move_to_element_with_offset(element, x, y).perform()
 
     def human_scroll(self):
