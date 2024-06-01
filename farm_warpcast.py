@@ -67,6 +67,11 @@ def start_farm(_account: WarpcastProfile):
             "use_module": config['module_switches']['subscribe_to_mandatory_channels'],
             "probability": config['subscribe_to_mandatory_channels']['use_module_probability'],
             "name": "subscribe to mandatory channels"
+        },
+        _account.connect_metamask: {
+            "use_module": config['module_switches']['connect_metamask'],
+            "probability": config['connect_metamask']['use_module_probability'],
+            "name": "connect metamask"
         }
     }
 
