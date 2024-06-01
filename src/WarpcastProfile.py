@@ -206,17 +206,6 @@ class WarpcastProfile(AdspowerProfile):
 
         raise Exception(f'Failed to find tab that includes {url_includes_text} in url')
 
-    # def __wait_for_new_tab(self, init_tabs_amount):
-    #     logger.debug('__wait_for_new_tab: entered method')
-    #     for i in range(config["element_wait_sec"]):
-    #         if len(self.driver.window_handles) > init_tabs_amount:
-    #             logger.debug('__wait_for_new_tab: found new tab')
-    #             return
-    #         else:
-    #             sleep(1)
-    #
-    #     raise Exception('Failed to open new tab or extension window')
-
     def __wait_for_new_tab(self, init_tabs):
         logger.debug('__wait_for_new_tab: entered method')
         for i in range(config["element_wait_sec"]):
