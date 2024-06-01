@@ -1,11 +1,13 @@
 from random import choice, randint, uniform, sample, shuffle
 from sys import stderr
+from time import sleep
 import json
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
 from loguru import logger
 
 from data.config import config
@@ -39,7 +41,7 @@ class WarpcastProfile(AdspowerProfile):
     def __use_search_input(self, text: str, press_enter: bool = True):
         logger.debug('__use_search_input: entered method')
         logger.debug('__use_search_input: selecting search input')
-        search_input = self.driver.find_element(By.XPATH, '//input[@type="search"]')
+        search_input = self.wait.until(EC.presence_of_element_located((By.XPATH, '//input[@type="search"]')))
         self.human_hover(search_input, True)
         self.random_subactivity_sleep()
 
@@ -190,6 +192,31 @@ class WarpcastProfile(AdspowerProfile):
 
         logger.debug('__dodge_popup: failed to dodge popup')
 
+    def __switch_to_tab(self, url_includes_text: str):
+        logger.debug('__switch_to_tab: entered method')
+        logger.debug(f'__switch_to_tab: looking for tab that includes "{url_includes_text}"')
+        for tab in self.driver.window_handles:
+            try:
+                self.driver.switch_to.window(tab)
+                if url_includes_text in self.driver.current_url:
+                    logger.debug(f'__switch_to_tab: switched to window "{self.driver.current_url}"')
+                    return
+            except:
+                pass
+
+        raise Exception(f'Failed to find tab that includes {url_includes_text} in url')
+
+    def __wait_for_new_tab(self, init_tabs):
+        logger.debug('__wait_for_new_tab: entered method')
+        for i in range(config["element_wait_sec"]):
+            if list(set(self.driver.window_handles) - set(init_tabs)):
+                logger.debug('__wait_for_new_tab: found new tab')
+                return
+            else:
+                sleep(1)
+
+        raise Exception('Failed to locate new tab or extension window')
+
     def visit_warpcast(self):
         self.driver.get('https://warpcast.com/')
 
@@ -258,6 +285,7 @@ class WarpcastProfile(AdspowerProfile):
                 logger.debug('subscribe_to_users: navigating to users list page')
                 find_users_button = self.driver.find_element(By.XPATH, '//a[@title="Find Users"]')
                 self.human_hover(find_users_button, click=True)
+                self.random_subactivity_sleep()
 
             logger.debug('subscribe_to_users: navigating to channels list page')
             find_channels_button = self.driver.find_element(By.XPATH, '//a[@title="Channels for you to follow"]')
@@ -544,3 +572,197 @@ class WarpcastProfile(AdspowerProfile):
 
             finally:
                 self.random_activity_sleep()
+
+    def connect_metamask(self):
+        logger.debug('connect_metamask: entered method')
+
+        def go_home():
+            home_button = self.driver.find_element(By.XPATH, '//a[@href="/"]')
+            self.human_hover(home_button, True)
+            self.random_subactivity_sleep()
+
+        def get_metamask_password() -> str:
+            logger.debug('connect_metamask:get_metamask_password: entered method')
+            with open('data/sensitive_data/metamask_passwords.txt', 'r') as file:
+                metamask_passwords_raw = [i.strip() for i in file]
+
+            _metamask_password = ''
+
+            for line in metamask_passwords_raw:
+                profile_name, password = line.split('|', 1)
+                if profile_name == self.profile_name:
+                    _metamask_password = password
+                    break
+
+            if not _metamask_password:
+                raise Exception('Metamask password is not provided')
+
+            return _metamask_password
+
+        def process_wallet_connection():
+            logger.debug('connect_metamask:process_wallet_connection: entered method')
+
+            def unlock():
+                logger.debug('connect_metamask:process_wallet_connection:unlock: entered method')
+                pass_input = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@data-testid="unlock-password"]')))
+                pass_input.send_keys(metamask_password)
+                unlock_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="unlock-submit"]')))
+                unlock_button.click()
+                logger.debug('connect_metamask:process_wallet_connection:unlock: unlocked wallet')
+
+            def connect():
+                try:  # if connection is cached there will not be connection request
+                    logger.debug('connect_metamask:process_wallet_connection:connect: entered method')
+                    next_button = self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, '//button[contains(@class, "btn-primary")]')))
+                    next_button.click()
+                    connect_button = self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="page-container-footer-next"]')))
+                    connect_button.click()
+                    logger.debug('connect_metamask:process_wallet_connection:connect:  connected wallet')
+                except NoSuchWindowException:  # cached connection
+                    logger.debug('connect_metamask:process_wallet_connection:connect:  cached connection')
+                    pass
+
+            self.__switch_to_tab('chrome-extension')
+
+            if '#unlock' in self.driver.current_url:
+                logger.debug('connect_metamask:process_wallet_connection: need to unlock')
+                unlock()
+                logger.debug('connect_metamask:process_wallet_connection: connecting')
+                connect()
+            else:
+                logger.debug('connect_metamask:process_wallet_connection: connecting')
+                connect()
+
+        def sign_with_metamask():
+            logger.debug('connect_metamask:sign_with_metamask: entered method')
+
+            def verify_origin(origin: str):
+                logger.debug('connect_metamask:sign_with_metamask:verify_origin: entered method')
+                current_origin = self.wait.until(
+                    EC.presence_of_element_located((By.XPATH, '//div[@class="signature-request__origin"]//span'))).text
+                if current_origin != origin:
+                    logger.debug("origin mismatch")
+                    signature_cancel_button = self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="signature-cancel-button"]')))
+                    signature_cancel_button.click()
+                    raise Exception(f'Origin mismatch, current: {current_origin}, required: {origin}')
+
+            def sign():
+                logger.debug('connect_metamask:sign_with_metamask:sign: entered method')
+                verify_origin('https://verify.warpcast.com')
+
+                try:
+                    scroll_button = self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, '//div[@data-testid="signature-request-scroll-button"]')))
+                    scroll_button.click()
+                except:
+                    pass
+
+                sign_button = self.wait.until(
+                    EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="signature-sign-button"]')))
+                sign_button.click()
+
+            self.__switch_to_tab('chrome-extension')
+            sign()
+
+        with open('data/profile_logs.json') as file:
+            profile_logs = json.load(file)
+
+        if profile_logs[self.profile_name]["wallet_connected"]:
+            logger.info(f'{self.profile_name} - wallet is already connected')
+            return
+
+        metamask_password = get_metamask_password()
+
+        logger.debug('connect_metamask: pressing profile button')
+        profile_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@title="Profile"]')))
+        self.human_hover(profile_button, click=True)
+        self.random_subactivity_sleep()
+
+        profile_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@title="Profile"]')))
+        self.human_hover(profile_button, click=True)
+        self.random_subactivity_sleep()
+
+        try:  # to go home before Exception as here will be missing search and cast buttons
+            edit_profile_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Edit Profile"]')))
+            self.human_hover(edit_profile_button, click=True)
+            self.random_subactivity_sleep()
+
+            verified_addresses_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@href="/~/settings/verified-addresses"]')))
+            self.human_hover(verified_addresses_button, click=True)
+            self.random_subactivity_sleep()
+        except Exception as e:
+            go_home()
+            raise Exception(e)
+
+        try:  # check if EVM wallet is already connected
+            self.driver.find_element(By.XPATH, '//img[@src="/static/media/ethereumLogoPurple.a6ebba304034873ba05c.webp"]')
+            logger.info(f'{self.profile_name} - looks like wallet was already connected before, skipping')
+
+            profile_logs[self.profile_name]["wallet_connected"] = True
+            with open("data/profile_logs.json", "w") as file:
+                json.dump(profile_logs, file, indent=4)
+
+            go_home()
+            return
+        except:
+            pass
+
+        try:  # to go home before Exception as here will be missing search and cast buttons
+            verify_an_address_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Verify an address"]')))
+            self.human_hover(verify_an_address_button, click=True)
+            self.random_subactivity_sleep()
+        except Exception as e:
+            go_home()
+            raise Exception(e)
+
+        main_tab = self.driver.current_window_handle
+        try:  # to go to main tab + go home before Exception as here will be missing search and cast buttons
+            self.__switch_to_tab('verify.warpcast.com')
+            warpcast_verify_tab = self.driver.current_window_handle
+            self.random_subactivity_sleep()
+
+            sleep(3)
+            # if wallet is unlocked and connection is cached - there will not be connection button
+            if self.driver.find_elements(By.XPATH, '//button[text()="Connect wallet"]'):
+                connect_wallet_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Connect wallet"]')))
+                self.human_hover(connect_wallet_button, click=True)
+                self.random_subactivity_sleep()
+
+                init_tabs = self.driver.window_handles
+                metamask_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="rk-wallet-option-metaMask"]')))  # rk-wallet-option-io.metamask
+                self.human_hover(metamask_button, click=True)
+                self.random_subactivity_sleep()
+
+                self.__wait_for_new_tab(init_tabs)
+                process_wallet_connection()
+                self.driver.switch_to.window(warpcast_verify_tab)
+                self.random_subactivity_sleep()
+
+            init_tabs = self.driver.window_handles
+            sign_message_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Sign message"]')))
+            self.human_hover(sign_message_button, click=True)
+            self.random_subactivity_sleep()
+
+            self.__wait_for_new_tab(init_tabs)
+            sign_with_metamask()
+            self.driver.switch_to.window(warpcast_verify_tab)
+            self.random_subactivity_sleep()
+
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Return to Warpcast"]')))
+            profile_logs[self.profile_name]["wallet_connected"] = True
+            with open("data/profile_logs.json", "w") as file:
+                json.dump(profile_logs, file, indent=4)
+
+            self.driver.close()
+            self.driver.switch_to.window(main_tab)
+            go_home()
+
+        except Exception as e:
+            self.driver.switch_to.window(main_tab)
+            self.random_subactivity_sleep()
+            go_home()
+
+            raise Exception(e)
