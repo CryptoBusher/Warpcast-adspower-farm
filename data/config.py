@@ -16,7 +16,8 @@ config = {
         "subscribe_to_channels_via_search": True,
         "subscribe_to_users_via_search": True,
         "subscribe_to_mandatory_users": True,
-        "subscribe_to_mandatory_channels": True
+        "subscribe_to_mandatory_channels": True,
+        "connect_metamask": True
     },
 
     # Настройки модулей
@@ -86,6 +87,9 @@ config = {
         "use_module_probability": 1.0,          # вероятность подписки на каналы из предоставленного списка (0 - 1)
         "min_subscribes_per_run": 1,            # минимальное количество подписок в рамках выполнения модуля
         "max_subscribes_per_run": 3             # максимальное количество подписок в рамках выполнения модуля
+    },
+    "connect_metamask": {
+        "use_module_probability": 1.0           # вероятность подключения метамаска (0 - 1)
     },
 
     # Задержки
