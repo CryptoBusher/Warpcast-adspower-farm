@@ -3,6 +3,8 @@ config = {
     "headless": False,                          # запускать браузер в скрытом режиме (True / False)
     "profiles_to_farm": 10,                     # сколько профилей прогреть (1+)
     "farm_running_profiles": True,              # работать с уже открытыми профилями (True / False)
+    "close_running_profiles": False,            # закрывать ли те профиля, которые уже были открыты (True / False)
+    "close_all_other_tabs": False,              # закрывать ли лишние вкладки (True / False)
     "show_debug_logs": False,                   # показывать дебаг лог, обычному юзеру не нужно (True / False)
     "element_wait_sec": 60,                     # как долго ждать подгрузки элемента перед фейлом, секунд (1+)
 

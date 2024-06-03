@@ -105,7 +105,7 @@ def start_farm(_account: WarpcastProfile):
             finally:
                 _account.random_activity_sleep()
 
-    if not _account.profile_was_running:
+    if not _account.profile_was_running or config["close_running_profiles"]:
         logger.info(f'{_account.profile_name} - closing profile')
         try:
             _account.close_profile()
