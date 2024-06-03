@@ -217,8 +217,27 @@ class WarpcastProfile(AdspowerProfile):
 
         raise Exception('Failed to locate new tab or extension window')
 
+    def __close_all_other_tabs(self):
+        initial_tab = self.driver.current_window_handle
+        tabs_to_close = self.driver.window_handles
+        tabs_to_close.remove(initial_tab)
+
+        for tab in tabs_to_close:
+            self.driver.switch_to.window(tab)
+            self.driver.close()
+
+        self.driver.switch_to.window(initial_tab)
+
     def visit_warpcast(self):
-        self.driver.get('https://warpcast.com/')
+        start_tab = self.driver.current_window_handle
+        try:
+            self.__switch_to_tab('warpcast.com')
+        except:
+            self.driver.switch_to.window(start_tab)
+            self.driver.get('https://warpcast.com/')
+
+        if config["close_all_other_tabs"]:
+            self.__close_all_other_tabs()
 
     def cast_on_homepage(self):
         with open('data/farm_data/casts.txt', 'r', encoding="utf8") as file:

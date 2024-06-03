@@ -1,0 +1,4 @@
+heart
+bank
+lemon
+banana
