@@ -48,6 +48,19 @@ class AdspowerProfile:
         with open("data/profile_logs.json", "w") as file:
             json.dump(profile_logs, file, indent=4)
 
+    def __init_webdriver(self, driver_path: str, debug_address: str):
+        chrome_driver = driver_path
+        chrome_options = Options()
+        caps = DesiredCapabilities().CHROME
+        caps["pageLoadStrategy"] = "eager"
+
+        chrome_options.add_experimental_option("debuggerAddress", debug_address)
+        driver = webdriver.Chrome(chrome_driver, options=chrome_options, desired_capabilities=caps)
+        driver.implicitly_wait = config['element_wait_sec']
+        self.driver = driver
+        self.action_chain = ActionChains(self.driver)
+        self.wait = WebDriverWait(self.driver, config['element_wait_sec'])
+
     @staticmethod
     def random_activity_sleep():
         logger.debug('random_activity_sleep: sleeping')
@@ -95,19 +108,6 @@ class AdspowerProfile:
         for char in text:
             sleep(uniform(config["delays"]["min_typing_sec"], config["delays"]["max_typing_sec"]))
             self.driver.switch_to.active_element.send_keys(char)
-
-    def __init_webdriver(self, driver_path: str, debug_address: str):
-        chrome_driver = driver_path
-        chrome_options = Options()
-        caps = DesiredCapabilities().CHROME
-        caps["pageLoadStrategy"] = "eager"
-
-        chrome_options.add_experimental_option("debuggerAddress", debug_address)
-        driver = webdriver.Chrome(chrome_driver, options=chrome_options, desired_capabilities=caps)
-        driver.implicitly_wait = config['element_wait_sec']
-        self.driver = driver
-        self.action_chain = ActionChains(self.driver)
-        self.wait = WebDriverWait(self.driver, config['element_wait_sec'])
 
     def open_profile(self, headless: bool = False):
         url = self.API_ROOT + '/api/v1/browser/active'
@@ -157,3 +157,39 @@ class AdspowerProfile:
             raise Exception('Failed to close profile')
 
         self.driver = None
+
+    def switch_to_tab(self, url_includes_text: str):
+        logger.debug('__switch_to_tab: entered method')
+        logger.debug(f'__switch_to_tab: looking for tab that includes "{url_includes_text}"')
+        for tab in self.driver.window_handles:
+            try:
+                self.driver.switch_to.window(tab)
+                if url_includes_text in self.driver.current_url:
+                    logger.debug(f'__switch_to_tab: switched to window "{self.driver.current_url}"')
+                    return
+            except:
+                pass
+
+        raise Exception(f'Failed to find tab that includes {url_includes_text} in url')
+
+    def wait_for_new_tab(self, init_tabs):
+        logger.debug('__wait_for_new_tab: entered method')
+        for i in range(config["element_wait_sec"]):
+            if list(set(self.driver.window_handles) - set(init_tabs)):
+                logger.debug('__wait_for_new_tab: found new tab')
+                return
+            else:
+                sleep(1)
+
+        raise Exception('Failed to locate new tab or extension window')
+
+    def close_all_other_tabs(self):
+        initial_tab = self.driver.current_window_handle
+        tabs_to_close = self.driver.window_handles
+        tabs_to_close.remove(initial_tab)
+
+        for tab in tabs_to_close:
+            self.driver.switch_to.window(tab)
+            self.driver.close()
+
+        self.driver.switch_to.window(initial_tab)
