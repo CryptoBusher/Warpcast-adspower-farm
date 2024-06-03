@@ -1,9 +1,0 @@
-1|ZkSync
-1|Dohuja
-1|Nasipet
-2|Podpiska
-3|Lajk
-4|Repost
-5|CKC
-2|Krutit
-1|Mir
