@@ -475,8 +475,9 @@ class WarpcastProfile(AdspowerProfile):
             subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
             if subscribe_button.text == "Follow":
                 self.human_hover(subscribe_button, click=True)
+                logger.info(f'{self.profile_name} - subscribed to {target}')
             else:
-                logger.info(f'{self.profile_name} - already subscribed to target {target_name}')
+                logger.info(f'{self.profile_name} - already following target {target_name}')
 
         def subscribe_via_search(target_name: str):
             self.__use_search_input(target_name, False)
@@ -486,7 +487,11 @@ class WarpcastProfile(AdspowerProfile):
             all_options = options_list.find_elements(By.XPATH, 'div')
 
             for option in all_options:
-                username = option.find_element(By.CSS_SELECTOR, 'div[class = "text-muted text-sm"]').text
+                try:
+                    username = option.find_element(By.CSS_SELECTOR, 'div[class = "text-muted text-sm"]').text
+                except NoSuchElementException:
+                    break
+
                 if username.replace('@', '') == target_name:
                     logger.debug('__mandatory_subscribe:subscribe_via_search: found target, subscribing')
                     self.human_hover(option, True)
@@ -495,11 +500,12 @@ class WarpcastProfile(AdspowerProfile):
                     subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
                     if subscribe_button.text == "Follow":
                         self.human_hover(subscribe_button, click=True)
+                        logger.info(f'{self.profile_name} - subscribed to {target}')
                     else:
-                        logger.info(f'{self.profile_name} - already subscribed to target {target_name}')
+                        logger.info(f'{self.profile_name} - already following target {target_name}')
                     return
 
-            raise Exception()
+            raise Exception('Failed to find user in dropdown menu')
 
         with open('data/profile_logs.json') as file:
             profile_logs = json.load(file)
@@ -521,7 +527,7 @@ class WarpcastProfile(AdspowerProfile):
         shuffle(remaining_subscribe_targets)
         logger.debug(f'__mandatory_subscribe: {len(remaining_subscribe_targets)} remaining_subscribe_targets')
         if not remaining_subscribe_targets:
-            logger.info(f'{self.profile_name} - already subscribed to all targets')
+            logger.info(f'{self.profile_name} - already following all targets')
             return
 
         subscribes_count = randint(subscribe_config['min_subscribes_per_run'],
@@ -546,15 +552,13 @@ class WarpcastProfile(AdspowerProfile):
                 else:
                     subscribe_via_search(target)
 
-                logger.info(f'{self.profile_name} - subscribed to {target}')
-
                 log_update_key = "mandatory_users_subscribes" if to_users else "mandatory_channels_subscribes"
                 profile_logs[self.profile_name][log_update_key].append(target)
                 with open("data/profile_logs.json", "w") as file:
                     json.dump(profile_logs, file, indent=4)
 
-            except Exception:
-                logger.error(f'{self.profile_name} - failed to subscribe to user, unexpected error')
+            except Exception as e:
+                logger.error(f'{self.profile_name} - failed to subscribe to user, reason: {e}')
 
             finally:
                 self.random_activity_sleep()

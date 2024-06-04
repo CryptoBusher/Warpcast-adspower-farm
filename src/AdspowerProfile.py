@@ -1,5 +1,6 @@
 from random import randint, uniform
 from time import sleep
+from platform import system
 import json
 
 import requests
@@ -112,9 +113,10 @@ class AdspowerProfile:
 
     def human_clear_selected_input(self) -> None:
         logger.debug('human_clear_selected_input: entered method')
-        self.action_chain.key_down(Keys.CONTROL).send_keys('a').perform()
+        key_to_hold = Keys.CONTROL if system() == 'Windows' else Keys.COMMAND
+        self.action_chain.key_down(key_to_hold).send_keys('a').key_up(key_to_hold).perform()
         sleep(uniform(0.1, 1))
-        self.action_chain.send_leys(Keys.BACKSPACE)
+        self.action_chain.send_keys(Keys.BACKSPACE).perform()
 
     def open_profile(self, headless: bool = False) -> None:
         url = self.API_ROOT + '/api/v1/browser/active'
