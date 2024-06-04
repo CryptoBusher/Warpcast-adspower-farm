@@ -45,6 +45,9 @@ class WarpcastProfile(AdspowerProfile):
         self.human_hover(search_input, True)
         self.random_subactivity_sleep()
 
+        self.human_clear_selected_input()
+        self.random_subactivity_sleep()
+
         logger.debug('__use_search_input: typing')
         self.human_type(text)
         self.random_subactivity_sleep()
