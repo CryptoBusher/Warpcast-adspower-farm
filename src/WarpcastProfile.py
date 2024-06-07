@@ -239,7 +239,7 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         logger.debug('cast_on_homepage: entering cast text')
-        self.human_type(cast_text + ' ')
+        self.human_type(cast_text)
         self.random_subactivity_sleep()
 
         to_use_emoji = True if uniform(0, 1) < config["use_emoji_in_cast_probability"] else False

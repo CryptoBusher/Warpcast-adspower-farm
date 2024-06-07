@@ -107,9 +107,16 @@ class AdspowerProfile:
 
     def human_type(self, text: str) -> None:
         logger.debug('human_type: entered method')
-        for char in text:
-            sleep(uniform(config["delays"]["min_typing_sec"], config["delays"]["max_typing_sec"]))
-            self.driver.switch_to.active_element.send_keys(char)
+        text_lines = text.split(r'\n')
+
+        for i, line in enumerate(text_lines):
+            for char in line:
+                sleep(uniform(config["delays"]["min_typing_sec"], config["delays"]["max_typing_sec"]))
+                self.action_chain.send_keys(char).perform()
+
+            if i != len(text_lines) - 1:
+                self.action_chain.send_keys(Keys.ENTER).perform()
+                sleep(uniform(config["delays"]["min_typing_sec"], config["delays"]["max_typing_sec"]))
 
     def human_clear_selected_input(self) -> None:
         logger.debug('human_clear_selected_input: entered method')
