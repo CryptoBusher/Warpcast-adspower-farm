@@ -1,5 +1,4 @@
-from random import choice, randint, uniform, sample, shuffle
-from sys import stderr
+from random import choice, randint, uniform, shuffle
 from time import sleep
 import json
 
@@ -195,10 +194,17 @@ class WarpcastProfile(AdspowerProfile):
 
         logger.debug('__dodge_popup: failed to dodge popup')
 
+    def __go_home(self):
+        home_button = self.driver.find_element(By.XPATH, '//a[@href="/"]')
+        self.human_hover(home_button, True)
+        self.random_subactivity_sleep()
+
     def visit_warpcast(self):
         start_tab = self.driver.current_window_handle
         try:
             self.switch_to_tab('warpcast.com')
+            if 'settings' in self.driver.current_url:
+                self.__go_home()
         except:
             self.driver.switch_to.window(start_tab)
             self.driver.get('https://warpcast.com/')
@@ -566,15 +572,10 @@ class WarpcastProfile(AdspowerProfile):
     def connect_metamask(self):
         logger.debug('connect_metamask: entered method')
 
-        def go_home():
-            home_button = self.driver.find_element(By.XPATH, '//a[@href="/"]')
-            self.human_hover(home_button, True)
-            self.random_subactivity_sleep()
-
         def get_metamask_password() -> str:
             logger.debug('connect_metamask:get_metamask_password: entered method')
-            with open('data/sensitive_data/metamask_passwords.txt', 'r') as file:
-                metamask_passwords_raw = [i.strip() for i in file]
+            with open('data/sensitive_data/metamask_passwords.txt', 'r') as _file:
+                metamask_passwords_raw = [i.strip() for i in _file]
 
             _metamask_password = ''
 
@@ -684,7 +685,7 @@ class WarpcastProfile(AdspowerProfile):
             self.human_hover(verified_addresses_button, click=True)
             self.random_subactivity_sleep()
         except Exception as e:
-            go_home()
+            self.__go_home()
             raise Exception(e)
 
         try:  # check if EVM wallet is already connected
@@ -695,7 +696,7 @@ class WarpcastProfile(AdspowerProfile):
             with open("data/profile_logs.json", "w") as file:
                 json.dump(profile_logs, file, indent=4)
 
-            go_home()
+            self.__go_home()
             return
         except:
             pass
@@ -705,7 +706,7 @@ class WarpcastProfile(AdspowerProfile):
             self.human_hover(verify_an_address_button, click=True)
             self.random_subactivity_sleep()
         except Exception as e:
-            go_home()
+            self.__go_home()
             raise Exception(e)
 
         main_tab = self.driver.current_window_handle
@@ -748,11 +749,11 @@ class WarpcastProfile(AdspowerProfile):
 
             self.driver.close()
             self.driver.switch_to.window(main_tab)
-            go_home()
+            self.__go_home()
 
         except Exception as e:
             self.driver.switch_to.window(main_tab)
             self.random_subactivity_sleep()
-            go_home()
+            self.__go_home()
 
             raise Exception(e)
