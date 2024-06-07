@@ -348,7 +348,7 @@ class WarpcastProfile(AdspowerProfile):
             '//main//div[@class=" fade-in"]//button[text()="Follow"]'
         )
 
-    def surf_feed(self):
+    def surf_feed(self, user_feed: bool = False):
         def like(interaction_button_div: WebElement):
             logger.debug('surf_feed:like: pressing like button')
             like_button = interaction_button_div.find_element(By.XPATH, './/div[1]/div[1]/div[3]')
@@ -370,15 +370,14 @@ class WarpcastProfile(AdspowerProfile):
             self.human_hover(bookmark_button, click=True)
 
         current_url = self.driver.current_url
-        if current_url != 'https://warpcast.com/':
+        if not user_feed and current_url != 'https://warpcast.com/':
             logger.debug('surf_feed: navigating to home page')
-            home_button = self.driver.find_element(By.XPATH, '//a[@title="Home"]')
-            self.human_hover(home_button, click=True)
-            self.random_subactivity_sleep()
+            self.__go_home()
 
         for i in range(randint(config['surf_feed']['min_scroll_episodes'],
                                config['surf_feed']['max_scroll_episodes'])):
             self.human_scroll()
+            self.__dodge_popup()
             self.random_subactivity_sleep()
 
             to_recast = True if (uniform(0, 1) < config['surf_feed']['recast_probability']) else False
@@ -516,20 +515,14 @@ class WarpcastProfile(AdspowerProfile):
     def subscribe_to_mandatory_channels(self):
         self.__mandatory_subscribe(False)
 
-    def __mandatory_subscribe(self, to_users: bool):
-        def direct_link_subscribe(target_name: str):
+    def __mandatory_subscribe(self, to_users: bool) -> None:
+        def direct_link_subscribe(target_name: str) -> None:
             url = f'https://warpcast.com/{target_name}' if to_users else f'https://warpcast.com/~/channel/{target_name}'
             self.driver.get(url)
             self.random_subactivity_sleep()
+            perform_subscription(target_name)
 
-            subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
-            if subscribe_button.text == "Follow":
-                self.human_hover(subscribe_button, click=True)
-                logger.info(f'{self.profile_name} - subscribed to {target}')
-            else:
-                logger.info(f'{self.profile_name} - already following target {target_name}')
-
-        def subscribe_via_search(target_name: str):
+        def subscribe_via_search(target_name: str) -> None:
             self.__use_search_input(target_name, False)
             self.random_subactivity_sleep()
 
@@ -546,16 +539,22 @@ class WarpcastProfile(AdspowerProfile):
                     logger.debug('__mandatory_subscribe:subscribe_via_search: found target, subscribing')
                     self.human_hover(option, True)
                     self.random_subactivity_sleep()
-
-                    subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
-                    if subscribe_button.text == "Follow":
-                        self.human_hover(subscribe_button, click=True)
-                        logger.info(f'{self.profile_name} - subscribed to {target}')
-                    else:
-                        logger.info(f'{self.profile_name} - already following target {target_name}')
-                    return
+                    perform_subscription(target_name)
 
             raise Exception('Failed to find user in dropdown menu')
+
+        def perform_subscription(target_name: str) -> None:
+            if to_users and uniform(0, 1) < config['subscribe_to_mandatory_users']['use_module_probability']:
+                pass
+                # self.surf_feed(True)  # TODO: x-paths for user feed
+                # TODO: go up till the end
+
+            subscribe_button = self.driver.find_element(By.XPATH, '//main//button[contains(text(),"ollow")]')
+            if subscribe_button.text == "Follow":
+                self.human_hover(subscribe_button, click=True)
+                logger.info(f'{self.profile_name} - subscribed to {target}')
+            else:
+                logger.info(f'{self.profile_name} - already following target {target_name}')
 
         with open('data/profile_logs.json') as file:
             profile_logs = json.load(file)
@@ -639,9 +638,11 @@ class WarpcastProfile(AdspowerProfile):
 
             def unlock():
                 logger.debug('connect_metamask:process_wallet_connection:unlock: entered method')
-                pass_input = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//input[@data-testid="unlock-password"]')))
+                pass_input = self.wait.until(
+                    EC.element_to_be_clickable((By.XPATH, '//input[@data-testid="unlock-password"]')))
                 pass_input.send_keys(metamask_password)
-                unlock_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="unlock-submit"]')))
+                unlock_button = self.wait.until(
+                    EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="unlock-submit"]')))
                 unlock_button.click()
                 logger.debug('connect_metamask:process_wallet_connection:unlock: unlocked wallet')
 
@@ -721,11 +722,13 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         try:  # to go home before Exception as here will be missing search and cast buttons
-            edit_profile_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Edit Profile"]')))
+            edit_profile_button = self.wait.until(
+                EC.element_to_be_clickable((By.XPATH, '//button[text()="Edit Profile"]')))
             self.human_hover(edit_profile_button, click=True)
             self.random_subactivity_sleep()
 
-            verified_addresses_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@href="/~/settings/verified-addresses"]')))
+            verified_addresses_button = self.wait.until(
+                EC.element_to_be_clickable((By.XPATH, '//a[@href="/~/settings/verified-addresses"]')))
             self.human_hover(verified_addresses_button, click=True)
             self.random_subactivity_sleep()
         except Exception as e:
@@ -733,7 +736,8 @@ class WarpcastProfile(AdspowerProfile):
             raise Exception(e)
 
         try:  # check if EVM wallet is already connected
-            self.driver.find_element(By.XPATH, '//img[@src="/static/media/ethereumLogoPurple.a6ebba304034873ba05c.webp"]')
+            self.driver.find_element(By.XPATH,
+                                     '//img[@src="/static/media/ethereumLogoPurple.a6ebba304034873ba05c.webp"]')
             logger.info(f'{self.profile_name} - looks like wallet was already connected before, skipping')
 
             profile_logs[self.profile_name]["wallet_connected"] = True
@@ -746,7 +750,8 @@ class WarpcastProfile(AdspowerProfile):
             pass
 
         try:  # to go home before Exception as here will be missing search and cast buttons
-            verify_an_address_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Verify an address"]')))
+            verify_an_address_button = self.wait.until(
+                EC.element_to_be_clickable((By.XPATH, '//button[text()="Verify an address"]')))
             self.human_hover(verify_an_address_button, click=True)
             self.random_subactivity_sleep()
         except Exception as e:
@@ -762,12 +767,14 @@ class WarpcastProfile(AdspowerProfile):
             sleep(3)
             # if wallet is unlocked and connection is cached - there will not be connection button
             if self.driver.find_elements(By.XPATH, '//button[text()="Connect wallet"]'):
-                connect_wallet_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Connect wallet"]')))
+                connect_wallet_button = self.wait.until(
+                    EC.element_to_be_clickable((By.XPATH, '//button[text()="Connect wallet"]')))
                 self.human_hover(connect_wallet_button, click=True)
                 self.random_subactivity_sleep()
 
                 init_tabs = self.driver.window_handles
-                metamask_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@data-testid="rk-wallet-option-metaMask"]')))  # rk-wallet-option-io.metamask
+                metamask_button = self.wait.until(EC.element_to_be_clickable(
+                    (By.XPATH, '//button[@data-testid="rk-wallet-option-metaMask"]')))  # rk-wallet-option-io.metamask
                 self.human_hover(metamask_button, click=True)
                 self.random_subactivity_sleep()
 
@@ -777,7 +784,8 @@ class WarpcastProfile(AdspowerProfile):
                 self.random_subactivity_sleep()
 
             init_tabs = self.driver.window_handles
-            sign_message_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//button[text()="Sign message"]')))
+            sign_message_button = self.wait.until(
+                EC.element_to_be_clickable((By.XPATH, '//button[text()="Sign message"]')))
             self.human_hover(sign_message_button, click=True)
             self.random_subactivity_sleep()
 
