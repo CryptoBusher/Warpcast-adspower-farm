@@ -1,6 +1,8 @@
 from random import choice, randint, uniform, shuffle
 from time import sleep
 import json
+from os import listdir, path, getcwd
+import re
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -11,7 +13,7 @@ from loguru import logger
 
 from data.config import config
 from src.AdspowerProfile import AdspowerProfile
-from src.helpers import remove_line
+from src.helpers import remove_line, probability_check_is_positive, remove_files
 
 
 class WarpcastProfile(AdspowerProfile):
@@ -56,7 +58,7 @@ class WarpcastProfile(AdspowerProfile):
             self.action_chain.send_keys(Keys.ENTER).perform()
             self.random_subactivity_sleep()
 
-    def __pick_cast_emoji(self):
+    def __pick_cast_emoji(self) -> None:
         logger.debug('__pick_cast_emoji: entered method')
         self.random_subactivity_sleep()
 
@@ -84,8 +86,8 @@ class WarpcastProfile(AdspowerProfile):
         self.human_type(emoji_name[:index_to])
         self.random_subactivity_sleep()
 
-        emoji_xpath_index = randint(0, config["max_deviation_from_search_result"])
-        emoji_repeats = randint(1, config["max_emoji_repeat"])
+        emoji_xpath_index = randint(0, config["cast_on_homepage"]["emojis"]["max_dev_from_result"])
+        emoji_repeats = randint(1, config["cast_on_homepage"]["emojis"]["max_repeat"])
         emojis_list = emoji_picker_shadow_root.find_elements(By.CSS_SELECTOR, 'div.category button')
 
         if len(emojis_list):
@@ -102,6 +104,54 @@ class WarpcastProfile(AdspowerProfile):
         area_to_click_to_close_emoji_picker = self.driver.find_element(By.XPATH, '//div[@class="DraftEditor-root"]')
         self.human_hover(area_to_click_to_close_emoji_picker, click=True)
         self.random_subactivity_sleep()
+
+    @staticmethod
+    def __remove_img_tags_from_text(cast_text: str) -> (str, list):
+        pattern = r'<[^<>]+\.[^<>]+>'
+        matches = re.findall(pattern, cast_text)
+        if matches:
+            for match in matches:
+                cast_text = cast_text.replace(match, '')
+
+        picture_names = [match[1:-1] for match in matches]
+        return cast_text, picture_names
+
+    def __add_picture_to_cast(self, picture_names: list) -> list:
+        logger.debug(f'__add_picture_to_cast: entered method')
+
+        def pick_images() -> list:
+            special_images_folder_path = path.join('data', 'farm_data', 'images_for_casts', 'specific')
+            special_images_files = listdir(special_images_folder_path)
+            random_images_folder_path = path.join('data', 'farm_data', 'images_for_casts', 'random')
+            random_images_files = listdir(random_images_folder_path)
+            images_to_use_paths_ = []
+
+            # pick special image for text
+            if picture_names:
+                images_to_use_paths_ = [path.join(special_images_folder_path, name) for name in picture_names]
+                logger.debug(f'__add_picture_to_cast:pick_image: img after special folder check: ${images_to_use_paths_}')
+
+            # pick random image
+            if not images_to_use_paths_ and random_images_files:
+                if probability_check_is_positive(config["cast_on_homepage"]["images"]["use_from_random_probability"]):
+                    images_to_use_paths_.append(path.join(random_images_folder_path, choice(random_images_files)))
+                    logger.debug(f'__add_picture_to_cast:pick_image: img after random folder check: ${images_to_use_paths_}')
+
+            return images_to_use_paths_
+
+        def upload_images(image_to_use_paths_: list) -> None:
+            for img_path in image_to_use_paths_:
+                if path.exists(img_path):
+                    file_input = self.driver.find_element(By.XPATH, '//input[@type="file"]')
+                    file_input.send_keys(path.join(getcwd(), img_path))
+                    logger.debug(f'__add_picture_to_cast:upload_image: sent image to input')
+                    self.wait.until(EC.presence_of_element_located((By.XPATH, '//div[@id="modal-root"]//img[@alt="Cast image embed"]')))
+                    logger.debug(f'__add_picture_to_cast:upload_image: found uploaded image element, success')
+                    self.random_subactivity_sleep()
+
+        image_to_use_paths = pick_images()
+        upload_images(image_to_use_paths)
+        return image_to_use_paths
 
     def __start_subscribing_with_scroll(self, min_scroll_episodes: int, max_scroll_episodes: int,
                                         min_subs_per_episode: int, max_subs_per_episode: int, buttons_xpath: str,
@@ -213,12 +263,13 @@ class WarpcastProfile(AdspowerProfile):
             self.close_all_other_tabs()
 
     def cast_on_homepage(self):
+        logger.debug('cast_on_homepage: entered method')
         with open('data/farm_data/casts.txt', 'r', encoding="utf8") as file:
             casts_raw = [i.strip() for i in file]
 
         casts = {}
         for cast_raw in casts_raw:
-            profile_name, cast_text = cast_raw.split('|')
+            profile_name, cast_text = cast_raw.split('|', 1)
             if profile_name not in casts:
                 casts[profile_name] = []
             casts[profile_name].append(cast_text)
@@ -239,18 +290,23 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         logger.debug('cast_on_homepage: entering cast text')
-        self.human_type(cast_text)
+        cast_text_without_img_tags, picture_names = self.__remove_img_tags_from_text(cast_text)
+        self.human_type(cast_text_without_img_tags)
         self.random_subactivity_sleep()
 
-        to_use_emoji = True if uniform(0, 1) < config["use_emoji_in_cast_probability"] else False
-        if to_use_emoji:
+        if probability_check_is_positive(config["cast_on_homepage"]["emojis"]["use_probability"]):
             self.__pick_cast_emoji()
+
+        added_images_paths = self.__add_picture_to_cast(picture_names)
+        if added_images_paths:
+            sleep(randint(7, 15))  # to avoid misclick because of modal window size change after img upload
 
         logger.debug('cast_on_homepage: pressing final cast button')
         final_cast_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//button[@title="Cast"]')
         self.human_hover(final_cast_button, click=True)
-        self.random_subactivity_sleep()
         remove_line('data/farm_data/casts.txt', f'{self.profile_name}|{cast_text}')
+        remove_files(added_images_paths)
+        self.random_subactivity_sleep()
 
     def subscribe_to_users_via_explore(self):
         logger.debug('subscribe_to_users: entered method')
@@ -374,12 +430,8 @@ class WarpcastProfile(AdspowerProfile):
         if config['subscribe_to_authors_via_search']['remove_text_from_base']:
             remove_line("data/farm_data/search_authors.txt", text)
 
-        use_scrolling_probability = config['subscribe_to_authors_via_search']['use_scrolling_probability']
-        use_scrolling = True if uniform(0, 1) < use_scrolling_probability else False
-
-        if not use_scrolling:
-            keep_order_probability = config['subscribe_to_authors_via_search']['keep_order_probability']
-            keep_order = True if uniform(0, 1) < keep_order_probability else False
+        if not probability_check_is_positive(config['subscribe_to_authors_via_search']['use_scrolling_probability']):
+            keep_order = probability_check_is_positive(config['subscribe_to_authors_via_search']['keep_order_probability'])
             amount = randint(config['subscribe_to_authors_via_search']['min_subscribes'],
                              config['subscribe_to_authors_via_search']['max_subscribes'])
             self.__start_subscribing_without_scroll(
@@ -411,12 +463,8 @@ class WarpcastProfile(AdspowerProfile):
         self.human_hover(find_channels_button, click=True)
         self.random_subactivity_sleep()
 
-        use_scrolling_probability = config['subscribe_to_channels_via_search']['use_scrolling_probability']
-        use_scrolling = True if uniform(0, 1) < use_scrolling_probability else False
-
-        if not use_scrolling:
-            keep_order_probability = config['subscribe_to_channels_via_search']['keep_order_probability']
-            keep_order = True if uniform(0, 1) < keep_order_probability else False
+        if not probability_check_is_positive(config['subscribe_to_channels_via_search']['use_scrolling_probability']):
+            keep_order = probability_check_is_positive(config['subscribe_to_channels_via_search']['keep_order_probability'])
             amount = randint(config['subscribe_to_channels_via_search']['min_subscribes'],
                              config['subscribe_to_channels_via_search']['max_subscribes'])
             self.__start_subscribing_without_scroll(amount, keep_order,
@@ -447,12 +495,8 @@ class WarpcastProfile(AdspowerProfile):
         self.human_hover(find_users_button, click=True)
         self.random_subactivity_sleep()
 
-        use_scrolling_probability = config['subscribe_to_users_via_search']['use_scrolling_probability']
-        use_scrolling = True if uniform(0, 1) < use_scrolling_probability else False
-
-        if not use_scrolling:
-            keep_order_probability = config['subscribe_to_users_via_search']['keep_order_probability']
-            keep_order = True if uniform(0, 1) < keep_order_probability else False
+        if not probability_check_is_positive(config['subscribe_to_users_via_search']['use_scrolling_probability']):
+            keep_order = probability_check_is_positive(config['subscribe_to_users_via_search']['keep_order_probability'])
             amount = randint(config['subscribe_to_users_via_search']['min_subscribes'],
                              config['subscribe_to_users_via_search']['max_subscribes'])
             self.__start_subscribing_without_scroll(amount, keep_order,
@@ -546,7 +590,7 @@ class WarpcastProfile(AdspowerProfile):
         for i in range(subscribes_count):
             target = remaining_subscribe_targets.pop(0)
             if to_users:
-                use_direct_link = True if uniform(0, 1) < subscribe_config["use_direct_link_probability"] else False
+                use_direct_link = probability_check_is_positive(subscribe_config["use_direct_link_probability"])
             else:
                 use_direct_link = True
 
