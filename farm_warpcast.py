@@ -96,7 +96,7 @@ def start_farm(_account: WarpcastProfile):
     _account.random_activity_sleep()
 
     for action in all_actions:
-        if uniform(0, 1) < actions_list[action]["probability"]:
+        if probability_check_is_positive(actions_list[action]["probability"]):
             logger.info(f'{_account.profile_name} - performing activity "{actions_list[action]["name"]}"')
             try:
                 action()
