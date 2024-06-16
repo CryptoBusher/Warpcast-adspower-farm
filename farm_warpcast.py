@@ -118,20 +118,20 @@ def start_farm(_account: WarpcastProfile):
             finally:
                 _account.random_activity_sleep()
 
-    # if not _account.profile_was_running or config["close_running_profiles"]:
-    #     logger.info(f'{_account.profile_name} - closing profile')
-    #     while True:
-    #         _i = 0
-    #         if _i > 10:
-    #             raise AdspowerApiThrottleException('Failed to close profile due to throttle! Adjust amount of threads and contact developer.')
-    #         try:
-    #             _account.close_profile()
-    #             break
-    #         except AdspowerApiThrottleException:
-    #             logger.debug('Throttle while closing profile')
-    #             _i += 1
-    # else:
-    #     logger.info(f'{_account.profile_name} - profile was running before farm, leaving it opened')
+    if not _account.profile_was_running or config["close_running_profiles"]:
+        logger.info(f'{_account.profile_name} - closing profile')
+        while True:
+            _i = 0
+            if _i > 10:
+                raise AdspowerApiThrottleException('Failed to close profile due to throttle! Adjust amount of threads and contact developer.')
+            try:
+                _account.close_profile()
+                break
+            except AdspowerApiThrottleException:
+                logger.debug('Throttle while closing profile')
+                _i += 1
+    else:
+        logger.info(f'{_account.profile_name} - profile was running before farm, leaving it opened')
 
 
 def main(account_chunks: list[WarpcastProfile], thread_id: int):
