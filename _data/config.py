@@ -1,5 +1,7 @@
 config = {
     # Общие настройки
+    "threads": 10,                              # количество потоков (1+)
+    "delay_before_first": True,                 # пауза перед первым аккаунтом в потоке (True / False)
     "headless": False,                          # запускать браузер в скрытом режиме (True / False)
     "profiles_to_farm": 10,                     # сколько профилей прогреть (1+)
     "farm_running_profiles": True,              # работать с уже открытыми профилями (True / False)

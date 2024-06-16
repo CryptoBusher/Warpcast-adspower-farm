@@ -1,5 +1,5 @@
 from random import randint, uniform
-from time import sleep
+from time import sleep, time
 from platform import system
 import json
 
@@ -14,10 +14,12 @@ from selenium.webdriver.common.keys import Keys
 from loguru import logger
 
 from data.config import config
+from src.exceptions import AdspowerApiThrottleException
 
 
 class AdspowerProfile:
     API_ROOT = 'http://local.adspower.com:50325'
+    LAST_API_CALL_TIMESTAMP = 0
 
     def __init__(self, profile_name: str, profile_id: str):
         self.profile_name = profile_name
@@ -29,6 +31,17 @@ class AdspowerProfile:
         self.profile_was_running = None
 
         self.__init_profile_logs()
+
+    @classmethod
+    def wait_for_api_readiness(cls):
+        logger.debug('Waiting for api readiness')
+        while True:
+            if time() - cls.LAST_API_CALL_TIMESTAMP < 2:
+                sleep(1)
+            else:
+                logger.debug('Api ready')
+                cls.LAST_API_CALL_TIMESTAMP = time()
+                break
 
     def __init_profile_logs(self) -> None:
         logger.debug('__init_profile_logs: entered method')
@@ -126,13 +139,17 @@ class AdspowerProfile:
         self.action_chain.send_keys(Keys.BACKSPACE).perform()
 
     def open_profile(self, headless: bool = False) -> None:
-        url = self.API_ROOT + '/api/v1/browser/active'
+        url = AdspowerProfile.API_ROOT + '/api/v1/browser/active'
         params = {
             "user_id": self.profile_id,
         }
 
+        AdspowerProfile.wait_for_api_readiness()
         is_active_response = requests.get(url, params=params).json()
-        if is_active_response["code"] != 0:
+
+        if is_active_response["code"] == -1:
+            raise AdspowerApiThrottleException()
+        elif is_active_response["code"] != 0:
             raise Exception('Failed to check profile open status')
 
         if is_active_response['data']['status'] == 'Active':
@@ -144,7 +161,7 @@ class AdspowerProfile:
 
         else:
             self.profile_was_running = False
-            url = self.API_ROOT + '/api/v1/browser/start'
+            url = AdspowerProfile.API_ROOT + '/api/v1/browser/start'
             params = {
                 "user_id": self.profile_id,
                 "open_tabs": "0",
@@ -152,24 +169,39 @@ class AdspowerProfile:
                 "headless": "1" if headless else "0",
             }
 
+            AdspowerProfile.wait_for_api_readiness()
             start_response = requests.get(url, params=params).json()
-            if start_response["code"] != 0:
+
+            if start_response["code"] == -1:
+                raise AdspowerApiThrottleException()
+            elif start_response["code"] != 0:
                 raise Exception(f'Failed to open profile, server response: {start_response}')
 
             self.__init_webdriver(start_response["data"]["webdriver"], start_response["data"]["ws"]["selenium"])
 
     def close_profile(self) -> None:
-        url_check_status = self.API_ROOT + '/api/v1/browser/active' + f'?user_id={self.profile_id}'
-        url_close_profile = self.API_ROOT + '/api/v1/browser/stop' + f'?user_id={self.profile_id}'
+        url_check_status = AdspowerProfile.API_ROOT + '/api/v1/browser/active' + f'?user_id={self.profile_id}'
+        url_close_profile = AdspowerProfile.API_ROOT + '/api/v1/browser/stop' + f'?user_id={self.profile_id}'
 
+        AdspowerProfile.wait_for_api_readiness()
         status_response = requests.get(url_check_status).json()
+
+        if status_response["code"] == -1:
+            raise AdspowerApiThrottleException()
+        elif status_response["code"] != 0:
+            raise Exception('Failed to check profile open status')
+
         if status_response['data']['status'] == 'Inactive':
             self.driver = None
             self.action_chain = None
             return
 
+        AdspowerProfile.wait_for_api_readiness()
         close_response = requests.get(url_close_profile).json()
-        if close_response["code"] != 0:
+
+        if close_response["code"] == -1:
+            raise AdspowerApiThrottleException()
+        elif close_response["code"] != 0:
             raise Exception('Failed to close profile')
 
         self.driver = None

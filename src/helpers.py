@@ -1,5 +1,7 @@
 from random import uniform
 from os import remove, path
+from time import time, sleep
+
 
 busher_logo = """
 ██████╗░██╗░░░██╗░██████╗██╗░░██╗███████╗██████╗░
@@ -35,3 +37,18 @@ def remove_files(rel_paths: list) -> None:
     for file_path in rel_paths:
         if path.exists(file_path):
             remove(file_path)
+
+
+def list_to_chunks(lst: list, max_chunks: int) -> list[list]:
+    base_chunk_size = len(lst) // max_chunks
+    remainder = len(lst) % max_chunks
+    chunks = []
+    for i in range(max_chunks):
+        chunk = [lst.pop(0) for i in range(base_chunk_size)]
+        if remainder > 0:
+            chunk.append(lst.pop(0))
+            remainder -= 1
+        chunks.append(chunk)
+
+    return chunks
+

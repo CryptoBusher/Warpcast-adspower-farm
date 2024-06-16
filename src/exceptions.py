@@ -1,0 +1,2 @@
+class AdspowerApiThrottleException(Exception):
+    pass

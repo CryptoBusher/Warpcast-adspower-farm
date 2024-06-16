@@ -1,6 +1,7 @@
 from sys import stderr
-from random import randint, choice, shuffle, uniform
+from random import randint, choice, shuffle, uniform, sample
 from time import sleep
+from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 
@@ -8,6 +9,7 @@ from src.helpers import *
 from src.WarpcastProfile import WarpcastProfile
 from data.profile_ids import profile_ids
 from data.config import config
+from src.exceptions import AdspowerApiThrottleException
 
 
 logger.remove()
@@ -87,7 +89,18 @@ def start_farm(_account: WarpcastProfile):
     shuffle(all_actions)
 
     logger.info(f'{_account.profile_name} - opening adspower profile')
-    _account.open_profile(config['headless'])
+
+    while True:
+        _i = 0
+        if _i > 10:
+            raise AdspowerApiThrottleException('Failed to open profile due to throttle! Adjust amount of threads and contact developer.')
+        try:
+            _account.open_profile(config['headless'])
+            break
+        except AdspowerApiThrottleException:
+            logger.debug('Throttle while opening profile')
+            _i += 1
+
     sleep(5)
     _account.driver.maximize_window()
 
@@ -105,14 +118,43 @@ def start_farm(_account: WarpcastProfile):
             finally:
                 _account.random_activity_sleep()
 
-    if not _account.profile_was_running or config["close_running_profiles"]:
-        logger.info(f'{_account.profile_name} - closing profile')
+    # if not _account.profile_was_running or config["close_running_profiles"]:
+    #     logger.info(f'{_account.profile_name} - closing profile')
+    #     while True:
+    #         _i = 0
+    #         if _i > 10:
+    #             raise AdspowerApiThrottleException('Failed to close profile due to throttle! Adjust amount of threads and contact developer.')
+    #         try:
+    #             _account.close_profile()
+    #             break
+    #         except AdspowerApiThrottleException:
+    #             logger.debug('Throttle while closing profile')
+    #             _i += 1
+    # else:
+    #     logger.info(f'{_account.profile_name} - profile was running before farm, leaving it opened')
+
+
+def main(account_chunks: list[WarpcastProfile], thread_id: int):
+    def acc_delay(is_min_zero: bool = False):
+        min_delay = 0 if is_min_zero else config["delays"]["min_idle_minutes"] * 60
+        max_delay = config["delays"]["max_idle_minutes"] * 60
+
+        idle_time_sec = randint(min_delay, max_delay)
+        logger.info(f'Sleeping {round(idle_time_sec / 60, 1)} minutes (thread {thread_id})')
+        sleep(idle_time_sec)
+
+    for account in account_chunks:
         try:
-            _account.close_profile()
-        except Exception as _err:
-            logger.error(f'{_account.profile_name} - failed to close profile, reason: {_err}')
-    else:
-        logger.info(f'{_account.profile_name} - profile was running before farm, leaving it opened')
+            if config["delay_before_first"]:
+                acc_delay(True)
+
+            logger.info(f'{account.profile_name} - starting farm (thread {thread_id})')
+            start_farm(account)
+            logger.success(f'{account.profile_name} - finished farm (thread {thread_id})')
+        except Exception as err:
+            logger.error(f'{account.profile_name} - error during farming (thread {thread_id}), reason: {err} ')
+
+        acc_delay(False)
 
 
 if __name__ == "__main__":
@@ -120,20 +162,18 @@ if __name__ == "__main__":
     for i, (profile_name, profile_id) in enumerate(profile_ids.items()):
         warpcast_accounts.append(WarpcastProfile(profile_name, profile_id))
 
-    if config["profiles_to_farm"] > len(warpcast_accounts):
+    amount_to_farm = config["profiles_to_farm"]
+    if amount_to_farm > len(warpcast_accounts):
         logger.info(f"Amount of profiles to farm > total amount of profiles, adjusted")
-        config["profiles_to_farm"] = len(warpcast_accounts)
+        amount_to_farm = len(warpcast_accounts)
 
-    for i in range(config["profiles_to_farm"]):
-        account = warpcast_accounts.pop(randint(0, len(warpcast_accounts) - 1))
+    warpcast_accounts_to_farm = sample(warpcast_accounts, amount_to_farm)
+    shuffle(warpcast_accounts_to_farm)
 
-        try:
-            logger.info(f'{account.profile_name} - starting farm')
-            start_farm(account)
-            logger.success(f'{account.profile_name} - finished farm')
-        except Exception as err:
-            logger.error(f'{account.profile_name} - failed to farm, reason: ${err}')
+    acc_chunks = list_to_chunks(warpcast_accounts, config["threads"])
 
-        idle_time_sec = randint(config["delays"]["min_idle_minutes"] * 60, config["delays"]["max_idle_minutes"] * 60)
-        logger.info(f'Sleeping {round(idle_time_sec / 60, 1)} minutes')
-        sleep(idle_time_sec)
+    with ThreadPoolExecutor(max_workers=config["threads"]) as executor:
+        futures = [executor.submit(main, chunk, thread_id + 1) for thread_id, chunk in enumerate(acc_chunks)]
+
+        for future in futures:
+            future.result()
