@@ -143,11 +143,11 @@ def main(account_chunks: list[WarpcastProfile], thread_id: int):
         logger.info(f'Sleeping {round(idle_time_sec / 60, 1)} minutes (thread {thread_id})')
         sleep(idle_time_sec)
 
+    if config["delay_before_first"]:
+        acc_delay(True)
+
     for account in account_chunks:
         try:
-            if config["delay_before_first"]:
-                acc_delay(True)
-
             logger.info(f'{account.profile_name} - starting farm (thread {thread_id})')
             start_farm(account)
             logger.success(f'{account.profile_name} - finished farm (thread {thread_id})')
