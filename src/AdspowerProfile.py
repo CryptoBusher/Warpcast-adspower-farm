@@ -146,6 +146,7 @@ class AdspowerProfile:
 
         AdspowerProfile.wait_for_api_readiness()
         is_active_response = requests.get(url, params=params).json()
+        logger.debug(f'open_profile: is_active_response: {is_active_response}')
 
         if is_active_response["code"] == -1:
             raise AdspowerApiThrottleException()
@@ -171,6 +172,7 @@ class AdspowerProfile:
 
             AdspowerProfile.wait_for_api_readiness()
             start_response = requests.get(url, params=params).json()
+            logger.debug(f'open_profile: start_response: {start_response}')
 
             if start_response["code"] == -1:
                 raise AdspowerApiThrottleException()
