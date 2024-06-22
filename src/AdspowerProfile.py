@@ -67,13 +67,12 @@ class AdspowerProfile:
         logger.debug(f'__init_webdriver: driver_path: {driver_path}')
         logger.debug(f'__init_webdriver: debug_address: {debug_address}')
 
-        chrome_driver = driver_path
         chrome_options = Options()
         caps = DesiredCapabilities().CHROME
         caps["pageLoadStrategy"] = "eager"
 
         chrome_options.add_experimental_option("debuggerAddress", debug_address)
-        driver = webdriver.Chrome(chrome_driver, options=chrome_options, desired_capabilities=caps)
+        driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options, desired_capabilities=caps)
         driver.implicitly_wait = config['element_wait_sec']
         self.driver = driver
         self.action_chain = ActionChains(self.driver)
