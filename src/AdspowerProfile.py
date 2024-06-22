@@ -64,6 +64,9 @@ class AdspowerProfile:
             json.dump(profile_logs, file, indent=4)
 
     def __init_webdriver(self, driver_path: str, debug_address: str) -> None:
+        logger.debug(f'__init_webdriver: driver_path: {driver_path}')
+        logger.debug(f'__init_webdriver: debug_address: {debug_address}')
+
         chrome_driver = driver_path
         chrome_options = Options()
         caps = DesiredCapabilities().CHROME
