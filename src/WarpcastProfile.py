@@ -63,7 +63,7 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         logger.debug('__pick_cast_emoji: pressing emoji button')
-        select_emoji_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//div[@type="button"][2]')
+        select_emoji_button = self.driver.find_element(By.XPATH, '(//div[@id="modal-root"]//div[@type="button"])[2]')
         self.human_hover(select_emoji_button, click=True)
         self.random_subactivity_sleep()
 
