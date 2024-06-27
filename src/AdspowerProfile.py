@@ -71,6 +71,7 @@ class AdspowerProfile:
         chrome_options = Options()
         # caps = DesiredCapabilities().CHROME
         # caps["pageLoadStrategy"] = "eager"
+        a = ''
 
         chrome_options.add_experimental_option("debuggerAddress", debug_address)
         service = Service(executable_path=driver_path)
