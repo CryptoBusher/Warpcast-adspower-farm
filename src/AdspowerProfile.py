@@ -11,6 +11,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from loguru import logger
 
 from data.config import config
@@ -68,11 +69,13 @@ class AdspowerProfile:
         logger.debug(f'__init_webdriver: debug_address: {debug_address}')
 
         chrome_options = Options()
-        caps = DesiredCapabilities().CHROME
-        caps["pageLoadStrategy"] = "eager"
+        # caps = DesiredCapabilities().CHROME
+        # caps["pageLoadStrategy"] = "eager"
 
         chrome_options.add_experimental_option("debuggerAddress", debug_address)
-        driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options, desired_capabilities=caps)
+        service = Service(executable_path=driver_path)
+
+        driver = webdriver.Chrome(service=service, options=chrome_options)#, desired_capabilities=caps)
         driver.implicitly_wait = config['element_wait_sec']
         self.driver = driver
         self.action_chain = ActionChains(self.driver)
