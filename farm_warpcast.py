@@ -170,7 +170,7 @@ if __name__ == "__main__":
     warpcast_accounts_to_farm = sample(warpcast_accounts, amount_to_farm)
     shuffle(warpcast_accounts_to_farm)
 
-    acc_chunks = list_to_chunks(warpcast_accounts, config["threads"])
+    acc_chunks = list_to_chunks(warpcast_accounts_to_farm, config["threads"])
 
     with ThreadPoolExecutor(max_workers=config["threads"]) as executor:
         futures = [executor.submit(main, chunk, thread_id + 1) for thread_id, chunk in enumerate(acc_chunks)]
