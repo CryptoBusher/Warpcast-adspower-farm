@@ -236,8 +236,12 @@ class WarpcastProfile(AdspowerProfile):
 
                 logger.debug(f'__dodge_popup: x{x} y{y}')
 
-                self.action_chain.move_by_offset(x, y).perform()
-                self.random_subactivity_sleep()
+                try:
+                    self.action_chain.move_by_offset(x, y).perform()
+                    self.random_subactivity_sleep()
+                except:
+                    pass
+
             except NoSuchElementException:
                 logger.debug('__dodge_popup: popup is not visible')
                 return
@@ -540,11 +544,12 @@ class WarpcastProfile(AdspowerProfile):
                     self.human_hover(option, True)
                     self.random_subactivity_sleep()
                     perform_subscription(target_name)
+                    return
 
             raise Exception('Failed to find user in dropdown menu')
 
         def perform_subscription(target_name: str) -> None:
-            if to_users and uniform(0, 1) < config['subscribe_to_mandatory_users']['use_module_probability']:
+            if to_users and uniform(0, 1) < 0:
                 pass
                 # self.surf_feed(True)  # TODO: x-paths for user feed
                 # TODO: go up till the end

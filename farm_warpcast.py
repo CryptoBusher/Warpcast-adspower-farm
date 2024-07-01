@@ -159,8 +159,10 @@ def main(account_chunks: list[WarpcastProfile], thread_id: int):
 
 if __name__ == "__main__":
     warpcast_accounts = []
+    debug_port = str(config["adspower_debug_port"]) if "adspower_debug_port" in config.keys() else '50325'
+
     for i, (profile_name, profile_id) in enumerate(profile_ids.items()):
-        warpcast_accounts.append(WarpcastProfile(profile_name, profile_id))
+        warpcast_accounts.append(WarpcastProfile(profile_name, profile_id, debug_port))
 
     amount_to_farm = config["profiles_to_farm"]
     if amount_to_farm > len(warpcast_accounts):

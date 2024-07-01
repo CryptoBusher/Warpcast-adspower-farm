@@ -4,7 +4,6 @@ from platform import system
 import json
 
 import requests
-from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.action_chains import ActionChains
@@ -13,17 +12,18 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
 from loguru import logger
 
+from src.selenium_custom import CustomWebDriver  # Avoids common Waprcast bugs
 from data.config import config
 from src.exceptions import AdspowerApiThrottleException
 
 
 class AdspowerProfile:
-    API_ROOT = 'http://local.adspower.com:50325'
     LAST_API_CALL_TIMESTAMP = 0
 
-    def __init__(self, profile_name: str, profile_id: str):
+    def __init__(self, profile_name: str, profile_id: str, port: str = '50325'):
         self.profile_name = profile_name
         self.profile_id = profile_id
+        self.api_root = 'http://local.adspower.com:' + port
 
         self.driver = None
         self.action_chain = None
@@ -72,7 +72,7 @@ class AdspowerProfile:
         caps["pageLoadStrategy"] = "eager"
 
         chrome_options.add_experimental_option("debuggerAddress", debug_address)
-        driver = webdriver.Chrome(executable_path=driver_path, options=chrome_options, desired_capabilities=caps)
+        driver = CustomWebDriver(executable_path=driver_path, options=chrome_options, desired_capabilities=caps)
         driver.implicitly_wait = config['element_wait_sec']
         self.driver = driver
         self.action_chain = ActionChains(self.driver)
@@ -141,7 +141,7 @@ class AdspowerProfile:
         self.action_chain.send_keys(Keys.BACKSPACE).perform()
 
     def open_profile(self, headless: bool = False) -> None:
-        url = AdspowerProfile.API_ROOT + '/api/v1/browser/active'
+        url = self.api_root + '/api/v1/browser/active'
         params = {
             "user_id": self.profile_id,
         }
@@ -164,7 +164,7 @@ class AdspowerProfile:
 
         else:
             self.profile_was_running = False
-            url = AdspowerProfile.API_ROOT + '/api/v1/browser/start'
+            url = self.api_root + '/api/v1/browser/start'
             params = {
                 "user_id": self.profile_id,
                 "open_tabs": "0",
@@ -184,8 +184,8 @@ class AdspowerProfile:
             self.__init_webdriver(start_response["data"]["webdriver"], start_response["data"]["ws"]["selenium"])
 
     def close_profile(self) -> None:
-        url_check_status = AdspowerProfile.API_ROOT + '/api/v1/browser/active' + f'?user_id={self.profile_id}'
-        url_close_profile = AdspowerProfile.API_ROOT + '/api/v1/browser/stop' + f'?user_id={self.profile_id}'
+        url_check_status = self.api_root + '/api/v1/browser/active' + f'?user_id={self.profile_id}'
+        url_close_profile = self.api_root + '/api/v1/browser/stop' + f'?user_id={self.profile_id}'
 
         AdspowerProfile.wait_for_api_readiness()
         status_response = requests.get(url_check_status).json()

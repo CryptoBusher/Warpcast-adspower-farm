@@ -9,6 +9,7 @@ config = {
     "close_all_other_tabs": False,              # закрывать ли лишние вкладки (True / False)
     "show_debug_logs": False,                   # показывать дебаг лог, обычному юзеру не нужно (True / False)
     "element_wait_sec": 60,                     # как долго ждать подгрузки элемента перед фейлом, секунд (1+)
+    "adspower_debug_port": 50325,  # можно найти в Adspower -> Automation -> API -> Connection
 
     # Свичи модулей
     "module_switches": {
