@@ -110,11 +110,14 @@ def start_farm(_account: WarpcastProfile):
 
     for action in all_actions:
         if probability_check_is_positive(actions_list[action]["probability"]):
-            logger.info(f'{_account.profile_name} - performing activity "{actions_list[action]["name"]}"')
+            activity_name = actions_list[action]["name"]
+            logger.info(f'{_account.profile_name} - performing activity "{activity_name}"')
             try:
                 action()
+                logger.info(f'{_account.profile_name} - done activity "{activity_name}"')
             except Exception as _err:
-                logger.error(f'{_account.profile_name} - failed to perform activity, reason: {_err}')
+                logger.error(f'{_account.profile_name} - failed to perform activity "{activity_name}", see details in debug log')
+                logger.debug(f'{_account.profile_name} - failed to perform activity "{activity_name}", reason: {_err}')
             finally:
                 _account.random_activity_sleep()
 
@@ -152,7 +155,8 @@ def main(account_chunks: list[WarpcastProfile], thread_id: int):
             start_farm(account)
             logger.success(f'{account.profile_name} - finished farm (thread {thread_id})')
         except Exception as err:
-            logger.error(f'{account.profile_name} - error during farming (thread {thread_id}), reason: {err} ')
+            logger.error(f'{account.profile_name} - error during farming (thread {thread_id}), see details in debug log')
+            logger.debug(f'{account.profile_name} - error during farming (thread {thread_id}), reason: {err}')
 
         acc_delay(False)
 

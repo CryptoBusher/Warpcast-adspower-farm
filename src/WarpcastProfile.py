@@ -299,15 +299,29 @@ class WarpcastProfile(AdspowerProfile):
         self.random_subactivity_sleep()
 
         if probability_check_is_positive(config["cast_on_homepage"]["emojis"]["use_probability"]):
-            self.__pick_cast_emoji()
+            try:
+                self.__pick_cast_emoji()
+            except Exception as e:
+                logger.error('Failed to pick cast emoji, casting without emojis, see details in debug log')
+                logger.debug(f'Failed to pick cast emoji, casting without emojis, reason: {e}')
 
         added_images_paths = self.__add_picture_to_cast(picture_names)
         if added_images_paths:
             sleep(randint(7, 15))  # to avoid misclick because of modal window size change after img upload
 
-        logger.debug('cast_on_homepage: pressing final cast button')
-        final_cast_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//button[@title="Cast"]')
-        self.human_hover(final_cast_button, click=True)
+        for i in range(3):
+            logger.debug('cast_on_homepage: pressing final cast button')
+            final_cast_button = self.driver.find_element(By.XPATH, '//div[@id="modal-root"]//button[@title="Cast"]')
+            is_final_cast_button_disabled = final_cast_button.get_attribute('disabled') is not None
+            self.human_hover(final_cast_button, click=True)
+            self.random_subactivity_sleep()
+
+            if not is_final_cast_button_disabled:
+                break
+            else:
+                logger.debug('cast_on_homepage - final cast button was disabled, retrying click')
+                continue  # if final cast button was disabled before click - first click will close unexpected dropdowns
+
         remove_line('data/farm_data/casts.txt', f'{self.profile_name}|{cast_text}')
         remove_files(added_images_paths)
         self.random_subactivity_sleep()
@@ -612,7 +626,8 @@ class WarpcastProfile(AdspowerProfile):
                     json.dump(profile_logs, file, indent=4)
 
             except Exception as e:
-                logger.error(f'{self.profile_name} - failed to subscribe to user, reason: {e}')
+                logger.error(f'{self.profile_name} - failed to subscribe to user, see details in debug log')
+                logger.debug(f'{self.profile_name} - failed to subscribe to user, reason: {e}')
 
             finally:
                 self.random_activity_sleep()
