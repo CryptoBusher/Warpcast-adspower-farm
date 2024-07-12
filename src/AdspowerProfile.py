@@ -46,7 +46,7 @@ class AdspowerProfile:
     def __init_profile_logs(self) -> None:
         logger.debug('__init_profile_logs: entered method')
         with open('data/profile_logs.json') as file:
-            profile_logs = json.load(file)
+            profile_logs = json.load(file, strict=False)
 
         if self.profile_name not in profile_logs:
             profile_logs[self.profile_name] = {}
