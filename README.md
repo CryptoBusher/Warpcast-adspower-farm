@@ -1,7 +1,5 @@
 # 🚀 Warpcast adspower farm
 
----
-
 # 🌎 English
 Why the fuck am I sharing this? This script will save you a ton of time. It works with Warpcast profiles that are imported into [AdsPower](https://share.adspower.net/Btc9YYgpiyJxhmW). I've struggled with randomization, so you can sleep soundly.
 
@@ -90,8 +88,6 @@ Why the fuck am I sharing this? This script will save you a ton of time. It work
 ## 💴 Donate
 Support my channel by donating on any EVM chain
 <b>0x77777777323736d17883eac36d822d578d0ecc80<b>
-
----
 
 # 🌏 Russian
 Нахуй я этим делюсь? Этот скрипт поможет сэкономить бешеное количество времени. Он работает с профилями Warpcast, которые импортированны в [AdsPower](https://share.adspower.net/Btc9YYgpiyJxhmW). Заебался с рандомизацией, так что можешь спать спокойно.
