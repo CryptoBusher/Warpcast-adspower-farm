@@ -273,7 +273,11 @@ class WarpcastProfile(AdspowerProfile):
 
         casts = {}
         for cast_raw in casts_raw:
-            profile_name, cast_text = cast_raw.split('|', 1)
+            try:
+                profile_name, cast_text = cast_raw.split('|', 1)
+            except ValueError:
+                logger.debug(f"Invalid cast format: {cast_raw}")
+                continue
             if profile_name not in casts:
                 casts[profile_name] = []
             casts[profile_name].append(cast_text)
