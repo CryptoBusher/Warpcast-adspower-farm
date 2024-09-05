@@ -245,3 +245,6 @@ class AdspowerProfile:
             self.driver.close()
 
         self.driver.switch_to.window(initial_tab)
+
+    def zoom(self, scale_percent: int):
+        self.driver.execute_script(f"document.body.style.zoom='{scale_percent}%'")

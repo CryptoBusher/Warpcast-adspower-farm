@@ -266,6 +266,8 @@ class WarpcastProfile(AdspowerProfile):
         if config["close_all_other_tabs"]:
             self.close_all_other_tabs()
 
+        self.zoom(100)
+
     def cast_on_homepage(self):
         logger.debug('cast_on_homepage: entered method')
         with open('data/farm_data/casts.txt', 'r', encoding="utf8") as file:
