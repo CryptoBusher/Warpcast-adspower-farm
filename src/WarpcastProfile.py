@@ -266,8 +266,8 @@ class WarpcastProfile(AdspowerProfile):
         if config["close_all_other_tabs"]:
             self.close_all_other_tabs()
 
-        sleep(3)
-        self.zoom(100)
+        # sleep(3)
+        # self.zoom(100)
 
     def cast_on_homepage(self):
         logger.debug('cast_on_homepage: entered method')
