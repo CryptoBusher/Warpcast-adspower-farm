@@ -3,7 +3,7 @@
 ## 🌎 English
 Why the fuck am I sharing this? This script will save you a ton of time. It works with Warpcast profiles that are imported into [AdsPower](https://share.adspower.net/Btc9YYgpiyJxhmW). I've struggled with randomization, so you can sleep soundly.
 
-<i>Contact developer: https://t.me/CrytoBusher</i> <br>
+<i>Contact developer: https://t.me/CryptoBusher</i> <br>
 <i>For Twitter guys: https://twitter.com/CryptoBusher</i> <br>
 
 <i>Join my Telegram channel and get more bots / smart ideas: https://t.me/CryptoKiddiesClub</i> <br>
@@ -93,7 +93,7 @@ Support my channel by donating on any EVM chain
 ## 🌏 Russian
 Нахуй я этим делюсь? Этот скрипт поможет сэкономить бешеное количество времени. Он работает с профилями Warpcast, которые импортированны в [AdsPower](https://share.adspower.net/Btc9YYgpiyJxhmW). Заебался с рандомизацией, так что можешь спать спокойно.
 
-<i>Связь с создателем: https://t.me/CrytoBusher</i> <br>
+<i>Связь с создателем: https://t.me/CryptoBusher</i> <br>
 <i>Если ты больше по Твиттеру: https://twitter.com/CryptoBusher</i> <br>
 
 <i>Залетай сюда, чтоб не пропускать дропы подобных скриптов: https://t.me/CryptoKiddiesClub</i> <br>
