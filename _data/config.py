@@ -8,6 +8,7 @@ config = {
     "close_running_profiles": False,            # close profiles that were already opened | закрывать ли те профиля, которые уже были открыты | (True / False)
     "close_all_other_tabs": False,              # close all other tabs | закрывать ли лишние вкладки | (True / False)
     "show_debug_logs": False,                   # show debug log, for developers | показывать дебаг лог, для разработчиков | (True / False)
+    "highlight_elements": False,                # higlight some elements for debug purposes | подсвечивать некоторые элементы для дебаггинга | (True / False)
     "element_wait_sec": 60,                     # how long bot should wait for an element before throwing an error, seconds | как долго ждать подгрузки элемента перед фейлом, секунд | (1+)
     "adspower_debug_port": 50325,               # можно найти в Adspower -> Automation -> API -> Connection
 
@@ -43,8 +44,7 @@ config = {
         "min_scroll_episodes": 2,               # minimum amount of feed scroll episodes | минимальное количество эпизодов прокрутки ленты | (1+)
         "max_scroll_episodes": 5,               # maximum amount of feed scroll episodes | максимальное количество эпизодов прокрутки ленты | (1+)
         "recast_probability": 0.4,              # random repost probability for specific scroll episode | вероятность репоста в рамках эпизода прокрутки | (0 - 1)
-        "like_probability": 0.7,                # random like probability for specific scroll episode | вероятность лайка в рамках эпизода прокрутки | (0 - 1)
-        "bookmark_probability": 0.1,            # random bookmark probability for specific scroll episode | вероятность сохранения поста в рамках эпизода прокрутки | (0 - 1)
+        "like_probability": 0.7                 # random like probability for specific scroll episode | вероятность лайка в рамках эпизода прокрутки | (0 - 1)
     },
     "subscribe_via_explore": {
         "to_users_probability": 0.3,            # follow users via explore probability | вероятность подписки на пользователей из рекомендаций | (0 - 1)

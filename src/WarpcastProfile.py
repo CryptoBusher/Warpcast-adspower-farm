@@ -37,7 +37,19 @@ class WarpcastProfile(AdspowerProfile):
             if win_upper_bound <= element_top_bound and win_lower_bound >= element_lower_bound:
                 visible_elements.append(element)
 
+        if config.get("highlight_elements", False):
+            self.__highlight_elements(visible_elements)
+            sleep(5)
+
         return visible_elements
+
+    def __highlight_elements(self, elements, color='red'):
+        allowed_colors = {'red', 'blue', 'green'}
+        if color not in allowed_colors:
+            color = 'red'
+
+        for element in elements:
+            self.driver.execute_script(f"arguments[0].style.border='3px solid {color}'", element)
 
     def __use_search_input(self, text: str, press_enter: bool = True):
         logger.debug('__use_search_input: entered method')
@@ -153,9 +165,13 @@ class WarpcastProfile(AdspowerProfile):
         upload_images(image_to_use_paths)
         return image_to_use_paths
 
-    def __start_subscribing_with_scroll(self, min_scroll_episodes: int, max_scroll_episodes: int,
-                                        min_subs_per_episode: int, max_subs_per_episode: int, buttons_xpath: str,
-                                        dodge_popups: bool = False):
+    def __start_subscribing_with_scroll(self,
+                                        min_scroll_episodes: int,
+                                        max_scroll_episodes: int,
+                                        min_subs_per_episode: int,
+                                        max_subs_per_episode: int,
+                                        buttons_xpath: str,
+                                        dodge_popups: bool = False) -> None:
         logger.debug('__start_subscribing_with_scroll: entered method')
         for i in range(randint(min_scroll_episodes, max_scroll_episodes)):
             logger.debug('__start_subscribing_with_scroll: scrolling')
@@ -374,25 +390,32 @@ class WarpcastProfile(AdspowerProfile):
         )
 
     def surf_feed(self, user_feed: bool = False):
-        def like(interaction_button_div: WebElement):
+        def like(interaction_div: WebElement) -> None:
             logger.debug('surf_feed:like: pressing like button')
-            like_button = interaction_button_div.find_element(By.XPATH, './/div[1]/div[1]/div[3]')
+            like_button_rel_xpath = './/div[contains(@class, "text-action-red")]'
+            like_button = interaction_div.find_element(By.XPATH, like_button_rel_xpath)
+
+            if config.get("highlight_elements", False):
+                self.__highlight_elements([like_button], 'green')
+                sleep(5)
+
             self.human_hover(like_button, click=True)
 
-        def recast(interaction_button_div: WebElement):
+        def recast(interaction_div: WebElement) -> None:
             logger.debug('surf_feed:recast: pressing recast button')
-            recast_button = interaction_button_div.find_element(By.XPATH, './/div[1]//div[2]')
+            recast_button_rel_xpath = './/div[contains(@class, "text-action-green")]'
+            recast_button = interaction_div.find_element(By.XPATH, recast_button_rel_xpath)
+
+            if config.get("highlight_elements", False):
+                self.__highlight_elements([recast_button], 'green')
+                sleep(5)
+
             self.human_hover(recast_button, click=True)
             self.random_subactivity_sleep()
 
             logger.debug('surf_feed:recast: pressing final recast button')
             final_recast_button = self.driver.find_element(By.XPATH, '//span[contains(text(), "Recast")]')
             self.human_hover(final_recast_button, click=True)
-
-        def bookmark(interaction_button_div: WebElement):
-            logger.debug('surf_feed:bookmark: pressing bookmark button')
-            bookmark_button = interaction_button_div.find_element(By.XPATH, './/div[1]/div[2]/div')
-            self.human_hover(bookmark_button, click=True)
 
         current_url = self.driver.current_url
         if not user_feed and current_url != 'https://warpcast.com/':
@@ -407,11 +430,10 @@ class WarpcastProfile(AdspowerProfile):
 
             to_recast = True if (uniform(0, 1) < config['surf_feed']['recast_probability']) else False
             to_like = True if (uniform(0, 1) < config['surf_feed']['like_probability']) else False
-            to_bookmark = True if (uniform(0, 1) < config['surf_feed']['bookmark_probability']) else False
-            logger.debug(f'surf_feed: recast - {to_recast}, like - {to_like}, bookmark - {to_bookmark}')
+            logger.debug(f'surf_feed: recast - {to_recast}, like - {to_like}')
 
-            if not to_recast + to_like + to_bookmark:
-                logger.debug(f'surf_feed: to_recast + to_like + to_bookmark = 0')
+            if not to_recast + to_like:
+                logger.debug(f'surf_feed: to_recast + to_like = 0')
                 continue
 
             all_cast_interactions = []
@@ -419,25 +441,28 @@ class WarpcastProfile(AdspowerProfile):
                 all_cast_interactions.append(recast)
             if to_like:
                 all_cast_interactions.append(like)
-            if to_bookmark:
-                all_cast_interactions.append(bookmark)
+
             shuffle(all_cast_interactions)
 
-            all_interaction_button_divs = self.driver.find_elements(
-                By.XPATH, '//main/div/div/div[2]//div[contains(@class, " items-start")]')
-            logger.debug(f'surf_feed: {len(all_interaction_button_divs)} all_interaction_button_divs')
-            visible_interaction_button_divs = self.__get_visible_elements(all_interaction_button_divs)
-            logger.debug(f'surf_feed: {len(visible_interaction_button_divs)} visible_interaction_button_divs')
-            if not visible_interaction_button_divs:
-                logger.debug(f'surf_feed: no any visible interaction button divs, skipping actions')
+            interaction_div_xpath = '//div[contains(@class, "text-action-red")]/../..'
+            all_interaction_divs = self.driver.find_elements(By.XPATH, interaction_div_xpath)
+            logger.debug(f'surf_feed: {len(all_interaction_divs)} all_interaction_divs')
+            visible_interaction_divs = self.__get_visible_elements(all_interaction_divs)
+            logger.debug(f'surf_feed: {len(visible_interaction_divs)} visible_interaction_divs')
+
+            if not visible_interaction_divs:
+                logger.debug(f'surf_feed: no any visible interaction divs, skipping actions')
                 continue
 
             for interaction in all_cast_interactions:
                 try:
-                    interaction(choice(visible_interaction_button_divs))
+                    interaction(choice(visible_interaction_divs))
                     self.random_subactivity_sleep()
-                except Exception:
-                    break
+                except Exception as e:
+                    logger.error(f'{self.profile_name} - failed to perform interaction during surfing feed, see details in debug log')
+                    logger.debug(f'{self.profile_name} - failed to perform interaction during surfing feed, reason: {e}')
+                    self.random_subactivity_sleep()
+                    continue
 
             self.random_subactivity_sleep()
 
@@ -454,8 +479,13 @@ class WarpcastProfile(AdspowerProfile):
         if config['subscribe_to_authors_via_search']['remove_text_from_base']:
             remove_line("data/farm_data/search_authors.txt", text)
 
+        recent_casts_button = self.driver.find_element(By.XPATH, '//a[@title="Recent casts found based on your search"]')
+        self.human_hover(recent_casts_button, click=True)
+        self.random_subactivity_sleep()
+
         if not probability_check_is_positive(config['subscribe_to_authors_via_search']['use_scrolling_probability']):
-            keep_order = probability_check_is_positive(config['subscribe_to_authors_via_search']['keep_order_probability'])
+            keep_order = probability_check_is_positive(
+                config['subscribe_to_authors_via_search']['keep_order_probability'])
             amount = randint(config['subscribe_to_authors_via_search']['min_subscribes'],
                              config['subscribe_to_authors_via_search']['max_subscribes'])
             self.__start_subscribing_without_scroll(

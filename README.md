@@ -25,6 +25,7 @@ Why the fuck am I sharing this? This script will save you a ton of time. It work
 - [x] 01.07.2024 - Added "adspower_debug_port" to config
 - [x] 12.07.2024 - Fixed errors during selecting emoji from menu, shifted error stack traces to debug log
 - [x] 03.08.2024 - Readme and config have been translated into English
+- [x] 03.02.2025 - Updated selectors, tested all methods, added "highlight_elements" to config, removed bookmark feature in "surf feed" module
 
 ## ⌛️ Next in line
 - Casts in channels according to a given scenario
@@ -113,8 +114,9 @@ Support my channel by donating on any EVM chain
 - [x] 16.06.2024 - Многопоточность
 - [x] 01.07.2024 - Фикс багов, фикс проблемы "Error retrieving data. Please try again."
 - [x] 01.07.2024 - Добавлен параметр "adspower_debug_port" в конфиг
-- [x] 12.07.2024 - Отловил ошибки при выборе emoji для каста, убрал stack traces в дебаг лог
+- [x] 12.07.2024 - Отловилены ошибки при выборе emoji для каста, убраны stack traces в дебаг лог
 - [x] 03.08.2024 - Readme и config переведены на Английский
+- [x] 03.02.2025 - Обновилены селекторы, оттестированы все методы, добавлены "highlight_elements" в конфиг, удалена функция "bookmark" из модуля "surf feed"
 
 ## ⌛️ На очереди
 - Касты в каналах по заданному сценарию
