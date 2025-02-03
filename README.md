@@ -28,8 +28,7 @@ Why the fuck am I sharing this? This script will save you a ton of time. It work
 - [x] 03.02.2025 - Updated selectors, tested all methods, added "highlight_elements" to config, removed bookmark feature in "surf feed" module
 
 ## ⌛️ Next in line
-- Casts in channels according to a given scenario
-- Activities in top projects
+- Actions
 
 ## ⚙️ Functionality
 1. Casts (home)
@@ -119,8 +118,7 @@ Support my channel by donating on any EVM chain
 - [x] 03.02.2025 - Обновилены селекторы, оттестированы все методы, добавлены "highlight_elements" в конфиг, удалена функция "bookmark" из модуля "surf feed"
 
 ## ⌛️ На очереди
-- Касты в каналах по заданному сценарию
-- Активности в топовых проектах 
+- Actions
 
 ## ⚙️ Функции
 1. Касты (home)
